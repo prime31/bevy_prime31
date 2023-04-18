@@ -37,7 +37,11 @@
 //! }
 //! ```
 
-use bevy::{input::mouse::MouseMotion, prelude::*, window::{CursorGrabMode, PrimaryWindow}};
+use bevy::{
+    input::mouse::MouseMotion,
+    prelude::*,
+    window::{CursorGrabMode, PrimaryWindow},
+};
 
 /// A marker `Component` for spectating cameras.
 ///
@@ -60,29 +64,20 @@ pub struct SpectatorPlugin;
 impl Plugin for SpectatorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SpectatorSettings>()
-            .add_startup_system(spectator_init.in_base_set(StartupSet::PostStartup))
+            .add_startup_system(setup.in_base_set(StartupSet::PostStartup))
             .add_system(spectator_update);
     }
 }
 
-// #[cfg(feature = "init")]
-fn spectator_init(
-    cameras: Query<Entity, With<Spectator>>,
-    mut settings: ResMut<SpectatorSettings>,
-) {
-    use bevy::ecs::query::QuerySingleError;
+fn setup(mut commands: Commands, query: Query<Entity, With<Camera>>) {
+    let entity = query.get_single().unwrap();
 
-    settings.active_spectator = match cameras.get_single() {
-        Ok(a) => Some(a),
-        Err(QuerySingleError::NoEntities(_)) => {
-            warn!("Failed to find a Spectator; Active camera will remain unset.");
-            None
-        }
-        Err(QuerySingleError::MultipleEntities(_)) => {
-            warn!("Found more than one Spectator; Active camera will remain unset.");
-            None
-        }
-    };
+    commands.insert_resource(SpectatorSettings {
+        active_spectator: Some(entity),
+        ..Default::default()
+    });
+
+    commands.entity(entity).insert(Spectator);
 }
 
 fn spectator_update(
@@ -216,10 +211,9 @@ impl Default for SpectatorSettings {
     fn default() -> Self {
         Self {
             active_spectator: None,
-            // active_window: Some(WindowId::primary()),
             base_speed: 0.1,
             alt_speed: 0.5,
-            sensitivity: 0.08,
+            sensitivity: 0.16,
         }
     }
 }

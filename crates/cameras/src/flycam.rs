@@ -51,7 +51,7 @@ impl Default for FlycamControls {
     }
 }
 
-fn spawn_camera(query: Query<(Entity, With<Camera>)>, mut commands: Commands) {
+fn spawn_camera(mut commands: Commands, query: Query<(Entity, With<Camera>)>) {
     commands
         .entity(query.get_single().unwrap().0)
         .insert(FlycamControls::default());
@@ -99,9 +99,14 @@ fn camera_look(
     mouse_input: Res<Input<MouseButton>>,
     mut mouse_motion_event_reader: EventReader<MouseMotion>,
     mut query: Query<(&mut FlycamControls, &mut Transform)>,
+    window_q: Query<&Window, With<PrimaryWindow>>,
 ) {
     let (mut flycam, mut transform) = query.single_mut();
-    if !mouse_input.pressed(MouseButton::Left) {
+    let window = window_q.get_single().unwrap();
+
+    if !mouse_input.pressed(MouseButton::Left)
+        && window.cursor.grab_mode != CursorGrabMode::Confined
+    {
         return;
     }
     if !flycam.enable_look {
@@ -136,17 +141,24 @@ fn camera_look(
 }
 
 fn toggle_cursor(
-    keyboard_input: Res<Input<KeyCode>>,
+    keys: Res<Input<KeyCode>>,
+    buttons: Res<Input<MouseButton>>,
     mut q: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     let mut window = q.get_single_mut().unwrap();
 
-    if keyboard_input.just_pressed(KeyCode::LAlt) {
-        window.cursor.grab_mode = CursorGrabMode::Confined;
-        window.cursor.visible = false;
-    }
-    if keyboard_input.just_released(KeyCode::LAlt) {
-        window.cursor.grab_mode = CursorGrabMode::None;
-        window.cursor.visible = true;
+    let mut set_focus = |focused: bool| {
+        let grab_mode = match focused {
+            true => CursorGrabMode::Confined,
+            false => CursorGrabMode::None,
+        };
+        window.cursor.grab_mode = grab_mode;
+        window.cursor.visible = !focused;
+    };
+
+    if keys.just_pressed(KeyCode::Escape) {
+        set_focus(false);
+    } else if buttons.just_pressed(MouseButton::Right) {
+        set_focus(true);
     }
 }
