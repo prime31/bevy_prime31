@@ -74,10 +74,6 @@ pub trait Lens<T> {
     fn lerp(&mut self, target: &mut T, ratio: f32);
 }
 
-/// A lens to manipulate the [`translation`] field of a [`Transform`] component.
-///
-/// [`translation`]: https://docs.rs/bevy/0.10.0/bevy/transform/components/struct.Transform.html#structfield.translation
-/// [`Transform`]: https://docs.rs/bevy/0.10.0/bevy/transform/components/struct.Transform.html
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TransformPositionLens {
     /// Start value of the translation.
@@ -102,14 +98,6 @@ impl Lens<Transform> for TransformPositionLens {
 /// cannot make entities do a full 360 degrees turn. Instead use
 /// [`TransformRotateXLens`] and similar to interpolate the rotation angle
 /// around a given axis.
-///
-/// See the [top-level `lens` module documentation] for a comparison of rotation
-/// lenses.
-///
-/// [`rotation`]: https://docs.rs/bevy/0.10.0/bevy/transform/components/struct.Transform.html#structfield.rotation
-/// [`Transform`]: https://docs.rs/bevy/0.10.0/bevy/transform/components/struct.Transform.html
-/// [`Quat::slerp()`]: https://docs.rs/bevy/0.10.0/bevy/math/struct.Quat.html#method.slerp
-/// [top-level `lens` module documentation]: crate::lens
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TransformRotationLens {
     /// Start value of the rotation.

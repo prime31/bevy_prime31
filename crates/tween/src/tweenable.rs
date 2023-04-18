@@ -146,10 +146,7 @@ impl AnimClock {
             TotalDuration::Infinite => TweenState::Active,
         };
 
-        (
-            state,
-            self.times_completed() as i32 - old_times_completed as i32,
-        )
+        (state, self.times_completed() as i32 - old_times_completed as i32)
     }
 
     fn elapsed(&self) -> Duration {
@@ -637,9 +634,7 @@ impl<T> Tweenable<T> for Tween<T> {
             TweenState::Active => (self.progress(), times_completed),
             TweenState::Completed => (1., times_completed.max(1) - 1), // ignore last
         };
-        if self.clock.strategy == RepeatStrategy::MirroredRepeat
-            && times_completed_for_direction & 1 != 0
-        {
+        if self.clock.strategy == RepeatStrategy::MirroredRepeat && times_completed_for_direction & 1 != 0 {
             self.direction = !self.direction;
         }
 
@@ -685,6 +680,24 @@ impl<T> Tweenable<T> for Tween<T> {
         }
         self.clock.reset();
     }
+
+    fn set_progress(&mut self, progress: f32) {
+        self.set_elapsed(self.duration().mul_f32(progress.max(0.)));
+    }
+
+    fn progress(&self) -> f32 {
+        let elapsed = self.elapsed();
+        if let TotalDuration::Finite(total_duration) = self.total_duration() {
+            if elapsed >= total_duration {
+                return 1.;
+            }
+        }
+        fraction_progress(elapsed, self.duration())
+    }
+
+    fn times_completed(&self) -> u32 {
+        (self.elapsed().as_nanos() / self.duration().as_nanos()) as u32
+    }
 }
 
 /// A sequence of tweens played back in order one after the other.
@@ -701,11 +714,7 @@ impl<T> Sequence<T> {
     pub fn new(items: impl IntoIterator<Item = impl Into<BoxedTweenable<T>>>) -> Self {
         let tweens: Vec<_> = items.into_iter().map(Into::into).collect();
         assert!(!tweens.is_empty());
-        let duration = tweens
-            .iter()
-            .map(AsRef::as_ref)
-            .map(Tweenable::duration)
-            .sum();
+        let duration = tweens.iter().map(AsRef::as_ref).map(Tweenable::duration).sum();
         Self {
             tweens,
             index: 0,
@@ -842,12 +851,7 @@ impl<T> Tracks<T> {
     #[must_use]
     pub fn new(items: impl IntoIterator<Item = impl Into<BoxedTweenable<T>>>) -> Self {
         let tracks: Vec<_> = items.into_iter().map(Into::into).collect();
-        let duration = tracks
-            .iter()
-            .map(AsRef::as_ref)
-            .map(Tweenable::duration)
-            .max()
-            .unwrap();
+        let duration = tracks.iter().map(AsRef::as_ref).map(Tweenable::duration).max().unwrap();
         Self {
             tracks,
             duration,

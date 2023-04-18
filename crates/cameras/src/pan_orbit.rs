@@ -117,8 +117,7 @@ fn pan_orbit_camera(
             // parent = x and y rotation
             // child = z-offset
             let rot_matrix = Mat3::from_quat(transform.rotation);
-            transform.translation =
-                pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
+            transform.translation = pan_orbit.focus + rot_matrix.mul_vec3(Vec3::new(0.0, 0.0, pan_orbit.radius));
         }
     }
 
@@ -140,40 +139,4 @@ fn spawn_camera(query: Query<(Entity, &Transform), With<Camera>>, mut commands: 
         radius,
         ..Default::default()
     });
-}
-
-fn _spawn_camera(mut commands: Commands) {
-    let translation = Vec3::new(-2.0, 2.5, 5.0);
-    let radius = translation.length();
-
-    commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_translation(translation).looking_at(Vec3::ZERO, Vec3::Y),
-            tonemapping:
-                bevy::core_pipeline::tonemapping::Tonemapping::SomewhatBoringDisplayTransform,
-            color_grading: bevy::render::view::ColorGrading {
-                exposure: -0.5,
-                post_saturation: 1.2,
-                ..default()
-            },
-            ..Default::default()
-        },
-        PanOrbitCamera {
-            radius,
-            ..Default::default()
-        },
-        FogSettings {
-            falloff: FogFalloff::Linear {
-                start: 14.0,
-                end: 35.0,
-            },
-            color: Color::DARK_GRAY * 0.85,
-            ..default()
-        },
-        bevy::core_pipeline::bloom::BloomSettings {
-            intensity: 0.35,
-            high_pass_frequency: 0.75,
-            ..default()
-        },
-    ));
 }

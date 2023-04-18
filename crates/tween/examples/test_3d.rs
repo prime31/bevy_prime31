@@ -1,9 +1,7 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use tween::{
-    lens::TransformPositionLens, unit_sphere, Animator, Delay, EaseFunction, Tween, TweeningPlugin,
-};
+use tween::{lens::TransformPositionLens, unit_sphere, Animator, Delay, EaseFunction, Tween, TweeningPlugin};
 
 fn main() {
     App::new()
@@ -18,11 +16,7 @@ fn main() {
 }
 
 /// set up a simple 3D scene
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>) {
     // plane
     commands.spawn(PbrBundle {
         mesh: meshes.add(shape::Plane::from_size(25.0).into()),
@@ -107,6 +101,8 @@ fn setup_tween_sequence(
     ));
 
     //
+    let cube = meshes.add(Mesh::from(shape::Cube { size: 0.2 }));
+
     let total_projectiles = 500;
     let initial_delay = 5;
     let tween_duration = 150;
@@ -150,7 +146,7 @@ fn setup_tween_sequence(
 
         commands.spawn((
             PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Cube { size: 0.2 })),
+                mesh: cube.clone(),
                 material: materials.add(Color::RED.into()),
                 ..default()
             },
