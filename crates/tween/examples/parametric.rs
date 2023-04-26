@@ -8,6 +8,7 @@ pub struct TransformParametricPositionLens {
     pub start: Vec3,
 }
 
+// UI tool: https://prime31.github.io/MathBox-Demos/parametric_curves_3D.html
 impl Lens<Transform> for TransformParametricPositionLens {
     fn lerp(&mut self, target: &mut Transform, ratio: f32) {
         target.translation.x = self.start.x + 3. * (ratio * 6.28).cos();
