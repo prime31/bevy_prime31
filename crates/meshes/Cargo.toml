@@ -3,6 +3,12 @@ name = "meshes"
 version = "0.1.0"
 edition = "2021"
 
-
 [dependencies]
 bevy = "*"
+
+[dev-dependencies]
+bevy-inspector-egui = "0.18"
+itertools = "0.10.3"
+noise = "0.7.0"
+
+cameras = { path = "../cameras" }
