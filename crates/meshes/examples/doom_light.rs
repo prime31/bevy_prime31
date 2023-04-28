@@ -18,6 +18,7 @@ fn main() {
         .add_plugin(MaterialPlugin::<DoomLightMaterial>::default())
         .add_plugin(DoomLightsPlugin)
         .add_plugin(bevy::pbr::wireframe::WireframePlugin)
+        .insert_resource(ClearColor(Color::BLACK))
         .add_startup_system(setup)
         .run();
 }
@@ -56,7 +57,7 @@ fn setup(
             ..default()
         },
         DoomLight::new(mesh),
-        // bevy::pbr::wireframe::Wireframe,
+        bevy::pbr::wireframe::Wireframe,
     ));
 }
 
