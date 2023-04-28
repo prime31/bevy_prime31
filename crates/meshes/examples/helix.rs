@@ -1,4 +1,4 @@
-use bevy::{DefaultPlugins, prelude::*};
+use bevy::{prelude::*, DefaultPlugins};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use cameras::flycam::FlycamPlugin;
 use meshes::SphericalHelix;

@@ -1,4 +1,12 @@
-use bevy::{pbr::CascadeShadowConfigBuilder, prelude::*, render::{mesh::{VertexAttributeValues, Indices}, render_resource::{PrimitiveTopology, AsBindGroup, ShaderRef}}, reflect::TypeUuid};
+use bevy::{
+    pbr::CascadeShadowConfigBuilder,
+    prelude::*,
+    reflect::TypeUuid,
+    render::{
+        mesh::{Indices, VertexAttributeValues},
+        render_resource::{AsBindGroup, PrimitiveTopology, ShaderRef},
+    },
+};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use cameras::flycam::FlycamPlugin;
 
@@ -14,7 +22,7 @@ fn main() {
         .run();
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut land_materials: ResMut<Assets<LandMaterial>>,) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut land_materials: ResMut<Assets<LandMaterial>>) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(2., 1.5, 3.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
         ..default()
@@ -35,37 +43,27 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut land_mate
     });
 
     // land
-        let mut land = Mesh::from(Land {
-            size: 1000.0,
-            num_vertices: 1000,
-        });
-        if let Some(VertexAttributeValues::Float32x3(positions)) = land.attribute(Mesh::ATTRIBUTE_POSITION) {
-            let colors: Vec<[f32; 4]> = positions
-                .iter()
-                .map(|[r, g, b]| {
-                    [
-                        (1. - *r) / 2.,
-                        (1. - *g) / 2.,
-                        (1. - *b) / 2.,
-                        1.,
-                    ]
-                })
-                .collect();
-            land.insert_attribute(
-                Mesh::ATTRIBUTE_COLOR,
-                colors,
-            );
-        }
+    let mut land = Mesh::from(Land {
+        size: 1000.0,
+        num_vertices: 1000,
+    });
+    if let Some(VertexAttributeValues::Float32x3(positions)) = land.attribute(Mesh::ATTRIBUTE_POSITION) {
+        let colors: Vec<[f32; 4]> = positions
+            .iter()
+            .map(|[r, g, b]| [(1. - *r) / 2., (1. - *g) / 2., (1. - *b) / 2., 1.])
+            .collect();
+        land.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors);
+    }
 
-        commands.spawn(MaterialMeshBundle {
-            mesh: meshes.add(land),
-            transform: Transform::from_xyz(0.0, 0.5, 0.0),
-            material: land_materials.add(LandMaterial {
-                time: 0.,
-                ship_position: Vec3::ONE
-            }),
-            ..default()
-        });
+    commands.spawn(MaterialMeshBundle {
+        mesh: meshes.add(land),
+        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        material: land_materials.add(LandMaterial {
+            time: 0.,
+            ship_position: Vec3::ONE,
+        }),
+        ..default()
+    });
 }
 
 impl Material for LandMaterial {
@@ -80,9 +78,8 @@ pub struct LandMaterial {
     #[uniform(0)]
     time: f32,
     #[uniform(1)]
-        ship_position: Vec3,
+    ship_position: Vec3,
 }
-
 
 #[derive(Debug, Copy, Clone)]
 struct Land {
@@ -100,17 +97,11 @@ impl From<Land> for Mesh {
             .cartesian_product(0..=plane.num_vertices)
             .map(|(y, x)| {
                 (
-                    [
-                        x as f32 * jump - 0.5 * extent,
-                        0.0,
-                        y as f32 * jump - 0.5 * extent,
-                    ],
+                    [x as f32 * jump - 0.5 * extent, 0.0, y as f32 * jump - 0.5 * extent],
                     [0.0, 1.0, 0.0],
                     [
-                        x as f32
-                            / plane.num_vertices as f32,
-                        y as f32
-                            / plane.num_vertices as f32,
+                        x as f32 / plane.num_vertices as f32,
+                        y as f32 / plane.num_vertices as f32,
                     ],
                 )
             })
@@ -129,21 +120,13 @@ impl From<Land> for Mesh {
                         Some([
                             [
                                 index as u32,
-                                index as u32
-                                    + 1
-                                    + 1
-                                    + plane.num_vertices,
+                                index as u32 + 1 + 1 + plane.num_vertices,
                                 index as u32 + 1,
                             ],
                             [
                                 index as u32,
-                                index as u32
-                                    + 1
-                                    + plane.num_vertices,
-                                index as u32
-                                    + plane.num_vertices
-                                    + 1
-                                    + 1,
+                                index as u32 + 1 + plane.num_vertices,
+                                index as u32 + plane.num_vertices + 1 + 1,
                             ],
                         ])
                     }

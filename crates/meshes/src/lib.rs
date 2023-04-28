@@ -107,8 +107,7 @@ impl From<SphericalHelix> for Mesh {
             verts.uvs[i * 2] = [phase, 0.0];
 
             // spiral_pts[i] += Vec3::new(0.0, 0.0, 0.5);
-            verts.positions[i * 2 + 1] =
-                (spiral_pts[i] - tangents[i] * helix.width * 0.5).to_array();
+            verts.positions[i * 2 + 1] = (spiral_pts[i] - tangents[i] * helix.width * 0.5).to_array();
             verts.normals[i * 2 + 1] = normals[i].to_array();
             verts.tangents[i * 2 + 1] = [-tangents[i][0], -tangents[i][1], -tangents[i][2], 0.0];
             verts.uvs[i * 2 + 1] = [phase, 1.0];
@@ -141,10 +140,7 @@ impl Ring {
 
 impl Default for Ring {
     fn default() -> Self {
-        return Ring {
-            sides: 10,
-            width: 0.5,
-        };
+        return Ring { sides: 10, width: 0.5 };
     }
 }
 
