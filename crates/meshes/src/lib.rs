@@ -5,6 +5,8 @@ use bevy::{
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 
+pub mod doom_light;
+
 #[derive(Debug, Clone)]
 pub struct SphericalHelix {
     pub steps: usize,
