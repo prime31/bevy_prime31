@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
     prelude::*,
@@ -8,6 +10,8 @@ use bevy::{
     },
     utils::{BoxedFuture, HashMap},
 };
+
+use bevy_rapier3d::prelude::*;
 
 use crate::{
     convert::{get_brush_entity_visual_geometry, MeshSurface},
@@ -69,7 +73,7 @@ impl AssetLoader for ValveMapLoader {
             // build geometry
             let entity_geometry = map.build_entity_geometry(&map_texture_info);
 
-            let _collision_geomotry: Vec<ConvexCollision> = entity_geometry
+            let collision_geometry: Vec<ConvexCollision> = entity_geometry
                 .iter()
                 .map(|geo| geo.get_convex_collision())
                 .flatten() // without flattening we get a Vec per entity
@@ -95,7 +99,6 @@ impl AssetLoader for ValveMapLoader {
                     }
                 };
 
-                // hook point for adding collision geometry
                 let mesh = Mesh::from(mesh_surface);
                 let mesh = load_context.set_labeled_asset(&format!("ValveMapMesh{}", i), LoadedAsset::new(mesh));
 
@@ -105,6 +108,14 @@ impl AssetLoader for ValveMapLoader {
                     transform: Transform::from_translation(mesh_surface.center_local(16.0)),
                     ..default()
                 });
+            }
+
+            // let registry = world.resource_mut::<AppTypeRegistry>();
+            // registry.write().register::<Collider>();
+
+            // or use this: Collider::from_bevy_mesh
+            for geo in collision_geometry {
+                world.spawn(Collider::convex_hull(&geo.points).unwrap());
             }
 
             load_context.set_default_asset(LoadedAsset::new(Scene::new(world)));

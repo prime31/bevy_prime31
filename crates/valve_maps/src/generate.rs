@@ -15,25 +15,7 @@ pub fn entity_build(textures: &TextureInfo, entity: &MapEntity) -> Geometry {
         .map(|brush| brush::build(textures, entity, brush))
         .collect();
 
-    // Calculate center
-    let origin = entity.fields.get("origin");
-    let center: Vec3 = match origin {
-        Some(origin) => {
-            let mut comps = origin.split(' ');
-            let x: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            let y: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            let z: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            Vec3::new(x, y, z)
-        }
-        None => {
-            brush_geometry
-                .iter()
-                .fold(Vec3::new(0.0, 0.0, 0.0), |acc, next| acc + next.center)
-                / (brush_geometry.len().max(1) as f32)
-        }
-    };
-
-    Geometry::new(center, brush_geometry)
+    Geometry::new(brush_geometry)
 }
 
 #[derive(Debug)]
@@ -68,13 +50,12 @@ impl TextureSize {
 
 #[derive(Debug, Clone)]
 pub struct Geometry {
-    pub center: Vec3,
     pub brush_geometry: Vec<brush::BrushGeometry>,
 }
 
 impl Geometry {
-    pub fn new(center: Vec3, brush_geometry: Vec<brush::BrushGeometry>) -> Geometry {
-        Geometry { center, brush_geometry }
+    pub fn new(brush_geometry: Vec<brush::BrushGeometry>) -> Geometry {
+        Geometry { brush_geometry }
     }
 
     pub fn get_convex_collision(&self) -> Vec<ConvexCollision> {
@@ -99,7 +80,7 @@ impl Geometry {
                     })
                     .collect::<Vec<Vec3>>();
 
-                ConvexCollision::new(self.center, points)
+                ConvexCollision::new(points)
             })
             .collect()
     }
@@ -107,13 +88,12 @@ impl Geometry {
 
 #[derive(Debug, Clone)]
 pub struct ConvexCollision {
-    pub center: Vec3,
     pub points: Vec<Vec3>,
 }
 
 impl ConvexCollision {
-    pub fn new(center: Vec3, points: Vec<Vec3>) -> ConvexCollision {
-        ConvexCollision { center, points }
+    pub fn new(points: Vec<Vec3>) -> ConvexCollision {
+        ConvexCollision { points }
     }
 
     pub fn center(&self) -> Vec3 {
