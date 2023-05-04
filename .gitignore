@@ -1,3 +1,4 @@
 /target
 /Cargo.lock
 .DS_Store
+crates/valve_maps/target

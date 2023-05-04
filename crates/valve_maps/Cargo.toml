@@ -1,0 +1,20 @@
+[package]
+name = "valve_maps"
+version = "0.0.1"
+edition = "2018"
+description = "A parser for the `.map` file format used by Quake 1 & 2 as well as Half-Life 1, implemented using the nom parsing framework."
+readme = "README.md"
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+bevy = "0.10"
+glam = "*"
+nom = "5.1.2"
+arrayvec = "0.5.1"
+nom-fields = "0.1.1"
+
+[dev-dependencies]
+cameras = { path = "../cameras" }
+bevy-inspector-egui = "0.18"
