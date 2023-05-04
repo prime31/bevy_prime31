@@ -1,9 +1,6 @@
-use std::any::Any;
-
 use bevy::{
     asset::{AssetLoader, LoadContext, LoadedAsset},
     prelude::*,
-    reflect::TypeUuid,
     render::{
         render_resource::{AddressMode, FilterMode, SamplerDescriptor},
         texture::{CompressedImageFormats, ImageSampler, ImageType},
@@ -11,16 +8,12 @@ use bevy::{
     utils::{BoxedFuture, HashMap},
 };
 
-use bevy_rapier3d::prelude::*;
-
 use crate::{
     convert::{get_brush_entity_visual_geometry, MeshSurface},
     generate::{ConvexCollision, TextureInfo},
 };
 
-#[derive(Debug, TypeUuid)]
-#[uuid = "49cadc56-aa9c-4543-8640-a018b74b5052"]
-pub struct ValveMap {}
+use super::ValveMap;
 
 #[derive(Default)]
 pub struct ValveMapLoader;
@@ -50,6 +43,7 @@ impl AssetLoader for ValveMapLoader {
                     CompressedImageFormats::all(),
                     false,
                 )?;
+
                 texture.sampler_descriptor = ImageSampler::Descriptor(texture_sampler());
                 map_texture_info.add_texture(
                     &texture_name,
@@ -89,7 +83,8 @@ impl AssetLoader for ValveMapLoader {
             let default_material_handle: Handle<StandardMaterial> =
                 load_context.set_labeled_asset("valve_map_default", LoadedAsset::new(Color::rgb(1.0, 0.0, 1.0).into()));
 
-            let mut world = World::default();
+            // let mut world = World::default();
+            let mut entities = Vec::new();
             for (i, mesh_surface) in mesh_surfaces.iter().enumerate() {
                 let material = {
                     if let Some(tex_name) = &mesh_surface.texture {
@@ -100,25 +95,22 @@ impl AssetLoader for ValveMapLoader {
                 };
 
                 let mesh = Mesh::from(mesh_surface);
-                let mesh = load_context.set_labeled_asset(&format!("ValveMapMesh{}", i), LoadedAsset::new(mesh));
-
-                world.spawn(PbrBundle {
-                    mesh,
-                    material,
-                    transform: Transform::from_translation(mesh_surface.center_local(16.0)),
-                    ..default()
-                });
+                let mesh_handle = load_context.set_labeled_asset(&format!("ValveMapMesh{}", i), LoadedAsset::new(mesh));
+                entities.push((mesh_surface.center_local(16.0), mesh_handle.clone(), material.clone()));
+                // world.spawn(PbrBundle {
+                    // mesh: mesh_handle,
+                    // material,
+                    // transform: Transform::from_translation(mesh_surface.center_local(16.0)),
+                    // ..default()
+                // });
             }
 
-            // let registry = world.resource_mut::<AppTypeRegistry>();
-            // registry.write().register::<Collider>();
-
-            // or use this: Collider::from_bevy_mesh
-            for geo in collision_geometry {
-                world.spawn(Collider::convex_hull(&geo.points).unwrap());
-            }
-
-            load_context.set_default_asset(LoadedAsset::new(Scene::new(world)));
+            let valve_map = ValveMap {
+                collision_geometry,
+                entities,
+                // scene_handle: load_context.set_labeled_asset("valve_map_scene", LoadedAsset::new(Scene::new(world)))
+            };
+            load_context.set_default_asset(LoadedAsset::new(valve_map));
 
             Ok(())
         })

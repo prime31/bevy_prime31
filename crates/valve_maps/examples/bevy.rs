@@ -3,13 +3,12 @@ use bevy::{
         default, AmbientLight, App, AssetPlugin, AssetServer, Camera3dBundle, Color, Commands, PluginGroup, Res,
         Transform, Vec3, *,
     },
-    scene::SceneBundle,
     DefaultPlugins,
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 use cameras::flycam::FlycamPlugin;
-use valve_maps::bevy::ValveMapPlugin;
+use valve_maps::bevy::{ValveMapPlugin, ValveMapBundle};
 
 fn main() {
     App::new()
@@ -25,7 +24,7 @@ fn main() {
         .add_plugin(FlycamPlugin)
         .insert_resource(AmbientLight {
             color: Color::WHITE,
-            brightness: 1.0 / 5.,
+            brightness: 0.5,
         })
         .run();
 }
@@ -37,7 +36,7 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands
-        .spawn(Collider::cuboid(100.0, 0.1, 100.0))
+        .spawn(Collider::cuboid(10.0, 0.1, 10.0))
         .insert(Restitution::coefficient(1.0))
         .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
     commands
@@ -61,13 +60,6 @@ fn setup_scene(
         ..default()
     });
 
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 1.5, 0.0),
-        ..default()
-    });
-
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
@@ -78,8 +70,8 @@ fn setup_scene(
         ..default()
     });
 
-    commands.spawn(SceneBundle {
-        scene: asset_server.load("test.map"),
-        ..default()
+    commands.spawn(ValveMapBundle {
+        map: asset_server.load("test.map"),
+        ..Default::default()
     });
 }

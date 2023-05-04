@@ -23,10 +23,23 @@ TrenchBroom:
 - in settings set the Game Path to your `assets` folder
 - be sure to add the `textures` folder in the Mods panel (may require restart)
 
+### Code
+
 ```rs
-commands.spawn(SceneBundle {
-    scene: asset_server.load("test.map"),
-    ..default()
+App::new()
+    .add_plugins(DefaultPlugins.set(AssetPlugin {
+        watch_for_changes: true,
+        ..Default::default()
+    }))
+    .add_plugin(ValveMapPlugin)
+    .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+    .add_plugin(RapierDebugRenderPlugin::default().always_on_top())
+    .run();
+
+// later on...
+commands.spawn(ValveMapBundle {
+    map: asset_server.load("test.map"),
+    ..Default::default()
 });
 ```
 
