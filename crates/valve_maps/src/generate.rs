@@ -15,7 +15,6 @@ pub fn entity_build(textures: &TextureInfo, entity: &MapEntity) -> Geometry {
         .map(|brush| brush::build(textures, entity, brush))
         .collect();
 
-    println!("----- entity: {:?}, brushes: {}", entity.get_property("classname"), brush_geometry.len());
     Geometry::new(brush_geometry)
 }
 
@@ -216,7 +215,7 @@ pub mod brush_plane {
                     .skip(i + 1)
                     .find(|comp| comp.vertex == vertex.vertex)
                 {
-                    None => match entity.get_property("_phong") {
+                    None => match entity.fields.get_property("_phong") {
                         Some("1") => {
                             let mut vertex = plane_vertices.iter().skip(i + 1).fold(vertex.clone(), |mut acc, next| {
                                 if next.vertex == acc.vertex {
@@ -379,8 +378,8 @@ pub fn vertex_in_hull(vertex: Vec3, hull: &[Plane]) -> bool {
 const ONE_DEGREE: f32 = 0.017_453_3;
 
 pub fn vertex_normal(entity: &MapEntity, p0: &Plane, p1: &Plane, p2: &Plane) -> Vec3 {
-    if let Some("1") = entity.get_property("_phong") {
-        return phong_normal(p0, p1, p2, entity.get_property("_phong_angle"));
+    if let Some("1") = entity.fields.get_property("_phong") {
+        return phong_normal(p0, p1, p2, entity.fields.get_property("_phong_angle"));
     }
 
     p0.normal()

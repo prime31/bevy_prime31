@@ -1,8 +1,7 @@
-use crate::generate::ConvexCollision;
 use bevy::{prelude::*, reflect::TypeUuid};
-use bevy_rapier3d::prelude::Collider;
+use bevy_rapier3d::prelude::{Collider, Sensor};
 
-use self::loader::ValveMapLoader;
+use self::loader::{ValveMapLoader, ValveMapEntity};
 
 pub mod loader;
 
@@ -10,8 +9,7 @@ pub mod loader;
 #[derive(Debug, TypeUuid)]
 #[uuid = "44cadc56-aa9c-4543-8640-a018b74b5052"]
 pub struct ValveMap {
-    pub collision_geometry: Vec<ConvexCollision>,
-    pub entities: Vec<(Vec3, Handle<Mesh>, Handle<StandardMaterial>)>,
+    pub entities: Vec<ValveMapEntity>,
 }
 
 
@@ -23,9 +21,6 @@ pub struct ValveMapBundle {
     pub visibility: Visibility,
     pub computed_visibility: ComputedVisibility,
 }
-
-
-
 
 #[derive(Component)]
 pub struct ValveMapHandled(pub Handle<ValveMap>);
@@ -77,25 +72,47 @@ fn handle_loaded_maps(
 
 fn instantiate_map_entities(commands: &mut Commands, entity: Entity, map: &ValveMap) {
     commands.entity(entity).with_children(|builder| {
-        for (pos, mesh, material) in &map.entities {
-            builder.spawn((
-                PbrBundle {
-                    mesh: mesh.clone(),
-                    material: material.clone(),
-                    transform: Transform::from_translation(*pos),
-                    ..default()
-                },
-                Name::new("ValveMapBrush"),
-            ));
-        }
+        for map_entity in &map.entities {
+            println!("------------ class: {:?}, visuals: {}", map_entity.fields.get_property("classname"), map_entity.visual_geometry.len());
+            let is_sensor = map_entity.fields.is_sensor();
 
-        for geo in &map.collision_geometry {
-            builder.spawn((
-                Collider::convex_hull(&geo.to_local(16.0)).unwrap(),
-                GlobalTransform::default(),
-                Transform::from_translation(geo.center_local(16.0)),
-                Name::new("ValveMapBrushCollider"),
-            ));
+            // handle any point types
+            if let Some("light") = map_entity.fields.get_property("classname") {
+                builder.spawn(PointLightBundle {
+                    point_light: PointLight {
+                        color: map_entity.fields.get_color_property("color").unwrap_or(Color::WHITE),
+                        intensity: map_entity.fields.get_f32_property("intensity").unwrap_or(800.),
+                        range: map_entity.fields.get_f32_property("range").unwrap_or(20.),
+                        shadows_enabled: map_entity.fields.get_bool_property("shadows_enabled").unwrap_or(false),
+                        ..default()
+                    },
+                    transform: Transform::from_translation(map_entity.fields.get_vec3_property("origin").unwrap()),
+                    ..default()
+                });
+            }
+
+            for visual_geo in &map_entity.visual_geometry {
+                builder.spawn((
+                    PbrBundle {
+                        mesh: visual_geo.mesh.clone(),
+                        material: visual_geo.material.clone(),
+                        transform: Transform::from_translation(visual_geo.origin),
+                        ..default()
+                    },
+                    Name::new("ValveMapBrush"),
+                ));
+            }
+
+            for geo in &map_entity.collision_geometry {
+                let mut entity = builder.spawn((
+                    Collider::convex_hull(&geo.to_local(16.0)).unwrap(),
+                    GlobalTransform::default(),
+                    Transform::from_translation(geo.center_local(16.0)),
+                    Name::new("ValveMapBrushCollider"),
+                ));
+
+                if is_sensor { entity.insert(Sensor); }
+            }
         }
     });
 }

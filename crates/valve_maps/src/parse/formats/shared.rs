@@ -1,61 +1,55 @@
-use bevy::prelude::Vec3;
+use bevy::prelude::{Vec3, Color};
+
+use crate::convert::quake_point_to_bevy_point;
 
 use super::valve::TextureAlignment;
 
 use {
-    std::{
-        collections::HashMap,
-        ops::{Deref, DerefMut}
-    },
     crate::parse::{
-        common::{fields, parse, quoted_string, many_fixed},
+        common::{fields, many_fixed, parse, quoted_string},
         core::{
-            Parse,
-            Input,
-            ParseResult,
             nom::{
                 branch::alt,
-                number::float,
-                error::ParseError,
                 bytes::{tag, take_till},
-                multi::{many0, fold_many0},
-                combinator::{map, opt, iterator, recognize},
-                sequence::{pair, delimited, terminated, preceded},
-                character::{char, multispace1, line_ending, not_line_ending}
-            }
-        }
-    }
+                character::{char, line_ending, multispace1, not_line_ending},
+                combinator::{iterator, map, opt, recognize},
+                error::ParseError,
+                multi::{fold_many0, many0},
+                number::float,
+                sequence::{delimited, pair, preceded, terminated},
+            },
+            Input, Parse, ParseResult,
+        },
+    },
+    std::{
+        collections::HashMap,
+        ops::{Deref, DerefMut},
+    },
 };
 
 pub(crate) fn separator<'i, E>(input: Input<'i>) -> ParseResult<Input<'i>, E>
-where E: ParseError<Input<'i>> + Clone {
-    recognize(
-        |input| {
-            let mut iter = iterator(
-                input,
-                alt((
-                    multispace1,
-                    terminated(comment, line_ending),
-                ))
-            );
-            iter.for_each(drop);
-            iter.finish()
-        }
-    )(input)
+where
+    E: ParseError<Input<'i>> + Clone,
+{
+    recognize(|input| {
+        let mut iter = iterator(input, alt((multispace1, terminated(comment, line_ending))));
+        iter.for_each(drop);
+        iter.finish()
+    })(input)
 }
 
 pub(crate) fn sep_terminated<'i, F, O, E>(parsed: F) -> impl Fn(Input<'i>) -> ParseResult<O, E>
 where
     F: Fn(Input<'i>) -> ParseResult<O, E>,
-    E: ParseError<Input<'i>> + Clone
+    E: ParseError<Input<'i>> + Clone,
 {
     terminated(parsed, separator)
 }
 
 pub(crate) fn maybe_sep_terminated<'i, F, O, E>(parsed: F) -> impl Fn(Input<'i>) -> ParseResult<O, E>
-    where
-        F: Fn(Input<'i>) -> ParseResult<O, E>,
-        E: ParseError<Input<'i>> + Clone
+where
+    F: Fn(Input<'i>) -> ParseResult<O, E>,
+    E: ParseError<Input<'i>> + Clone,
 {
     terminated(parsed, opt(separator))
 }
@@ -79,6 +73,56 @@ impl Fields {
     pub fn into_inner(self) -> HashMap<String, String> {
         self.0
     }
+
+    pub fn get_property(&self, name: &str) -> Option<&str> {
+        if let Some(s) = self.0.get(&String::from(name)) {
+            return Some(&s[..]);
+        }
+        None
+    }
+
+    pub fn is_sensor(&self) -> bool {
+        if let Some(prop) = self.0.get("classname") {
+            return prop == "sensor";
+        }
+        false
+    }
+
+    pub fn get_bool_property(&self, name: &str) -> Option<bool> {
+        if let Some(prop) = self.0.get(name) {
+            return Some(prop == "1");
+        }
+        None
+    }
+
+    pub fn get_f32_property(&self, name: &str) -> Option<f32> {
+        if let Some(prop) = self.0.get(name) {
+            return Some(prop.parse().unwrap_or(0.0));
+        }
+        None
+    }
+
+    pub fn get_vec3_property(&self, name: &str) -> Option<Vec3> {
+        if let Some(prop) = self.0.get(name) {
+            let mut comps = prop.split(' ');
+            let x: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
+            let y: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
+            let z: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
+            return Some(quake_point_to_bevy_point(Vec3::new(x, y, z), 16.0))
+        }
+        None
+    }
+
+    pub fn get_color_property(&self, name: &str) -> Option<Color> {
+        if let Some(prop) = self.0.get(name) {
+            let mut comps = prop.split(' ');
+            let r: u8 = comps.next().unwrap_or("255").parse().unwrap_or(255);
+            let g: u8 = comps.next().unwrap_or("255").parse().unwrap_or(0);
+            let b: u8 = comps.next().unwrap_or("255").parse().unwrap_or(255);
+            return Some(Color::rgb_u8(r, g, b));
+        }
+        None
+    }
 }
 
 impl Deref for Fields {
@@ -95,24 +139,21 @@ impl DerefMut for Fields {
     }
 }
 
-impl <'i, E> Parse<'i, E> for Fields
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for Fields
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
         map(
             fold_many0(
-                maybe_sep_terminated(
-                    pair(
-                        maybe_sep_terminated(quoted_string),
-                        quoted_string
-                    )
-                ),
+                maybe_sep_terminated(pair(maybe_sep_terminated(quoted_string), quoted_string)),
                 HashMap::new(),
                 |mut map, (k, v)| {
                     map.insert(k.into(), v.into());
                     map
-                }
+                },
             ),
-            Fields
+            Fields,
         )(input)
     }
 }
@@ -123,30 +164,21 @@ where E: ParseError<Input<'i>> + Clone {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct MapEntity {
     pub fields: Fields,
-    pub brushes: Vec<Brush>
+    pub brushes: Vec<Brush>,
 }
 
-impl MapEntity {
-    pub fn get_property(&self, name: &str) -> Option<&str> {
-        if let Some(s) = self.fields.get(&String::from(name)) {
-            return Some(&s[..]);
-        }
-        None
-    }
-}
-
-impl <'i, E> Parse<'i, E> for MapEntity
+impl<'i, E> Parse<'i, E> for MapEntity
 where
-    E: ParseError<Input<'i>> + Clone
+    E: ParseError<Input<'i>> + Clone,
 {
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
         delimited(
             pair(char('{'), opt(separator)),
-            fields!(MapEntity:
-                fields = maybe_sep_terminated(parse),
+            fields!(
+                MapEntity: fields = maybe_sep_terminated(parse),
                 brushes = many0(maybe_sep_terminated(parse))
             ),
-            char('}')
+            char('}'),
         )(input)
     }
 }
@@ -160,7 +192,7 @@ where
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Plane {
     pub points: [Vector3; 3],
-    pub texture: Texture
+    pub texture: Texture,
 }
 
 impl Plane {
@@ -188,21 +220,17 @@ impl Plane {
     }
 }
 
-impl <'i, E> Parse<'i, E> for Plane
+impl<'i, E> Parse<'i, E> for Plane
 where
-    E: ParseError<Input<'i>> + Clone
+    E: ParseError<Input<'i>> + Clone,
 {
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Plane:
-            points = many_fixed(
-                maybe_sep_terminated(
-                    delimited(
-                        pair(char('('), opt(separator)),
-                        parse,
-                        pair(opt(separator), char(')'))
-                    ),
-                )
-            ),
+        fields!(
+            Plane: points = many_fixed(maybe_sep_terminated(delimited(
+                pair(char('('), opt(separator)),
+                parse,
+                pair(opt(separator), char(')'))
+            ),)),
             texture = parse
         )(input)
     }
@@ -213,7 +241,7 @@ where
 pub struct Vector3 {
     pub x: f32,
     pub y: f32,
-    pub z: f32
+    pub z: f32,
 }
 
 impl Vector3 {
@@ -224,18 +252,20 @@ impl Vector3 {
 
 impl Into<Vector3> for Vec3 {
     fn into(self) -> Vector3 {
-        return Vector3 {x: self.x, y: self.y, z: self.z};
+        return Vector3 {
+            x: self.x,
+            y: self.y,
+            z: self.z,
+        };
     }
 }
 
-impl <'i, E> Parse<'i, E> for Vector3
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for Vector3
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Vector3:
-            x = sep_terminated(float),
-            y = sep_terminated(float),
-            z = float
-        )(input)
+        fields!(Vector3: x = sep_terminated(float), y = sep_terminated(float), z = float)(input)
     }
 }
 
@@ -248,18 +278,13 @@ pub struct Texture {
     pub alignment: TextureAlignment,
 }
 
-impl <'i, E> Parse<'i, E> for Texture
+impl<'i, E> Parse<'i, E> for Texture
 where
-    E: ParseError<Input<'i>> + Clone
+    E: ParseError<Input<'i>> + Clone,
 {
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Texture:
-            name = map(
-                sep_terminated(
-                    take_till(char::is_whitespace)
-                ),
-                String::from
-            ),
+        fields!(
+            Texture: name = map(sep_terminated(take_till(char::is_whitespace)), String::from),
             alignment = parse
         )(input)
     }
@@ -269,27 +294,28 @@ where
 /// list of [Plane](Plane)s.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Brush {
-    pub planes: Vec<Plane>
+    pub planes: Vec<Plane>,
 }
 
-impl <'i, E> Parse<'i, E> for Brush
+impl<'i, E> Parse<'i, E> for Brush
 where
-    E: ParseError<Input<'i>> + Clone
+    E: ParseError<Input<'i>> + Clone,
 {
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
         map(
             delimited(
                 pair(char('{'), opt(separator)),
                 many0(maybe_sep_terminated(parse)),
-                pair(opt(separator), char('}'))
+                pair(opt(separator), char('}')),
             ),
-            |planes| Brush { planes }
+            |planes| Brush { planes },
         )(input)
     }
 }
 
 pub(crate) fn comment<'i, E>(input: Input<'i>) -> ParseResult<Input<'i>, E>
-where E: ParseError<Input<'i>> {
+where
+    E: ParseError<Input<'i>>,
+{
     preceded(tag("//"), not_line_ending)(input)
 }
-

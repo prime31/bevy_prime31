@@ -10,10 +10,41 @@ use bevy::{
 
 use crate::{
     convert::{get_brush_entity_visual_geometry, MeshSurface},
+    formats::shared::Fields,
     generate::{ConvexCollision, TextureInfo},
 };
 
 use super::ValveMap;
+
+#[derive(Debug)]
+pub struct ValveMapEntity {
+    pub fields: Fields,
+    pub collision_geometry: Vec<ConvexCollision>,
+    pub visual_geometry: Vec<ValveMapVisualGeometry>,
+}
+
+impl ValveMapEntity {
+    fn new(fields: Fields, collision_geometry: Vec<ConvexCollision>) -> ValveMapEntity {
+        ValveMapEntity {
+            fields,
+            visual_geometry: Vec::new(),
+            collision_geometry,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ValveMapVisualGeometry {
+    pub origin: Vec3,
+    pub mesh: Handle<Mesh>,
+    pub material: Handle<StandardMaterial>,
+}
+
+impl ValveMapVisualGeometry {
+    fn new(origin: Vec3, mesh: Handle<Mesh>, material: Handle<StandardMaterial>) -> ValveMapVisualGeometry {
+        ValveMapVisualGeometry { origin, mesh, material }
+    }
+}
 
 #[derive(Default)]
 pub struct ValveMapLoader;
@@ -64,45 +95,59 @@ impl AssetLoader for ValveMapLoader {
                 materials.insert(texture_name.clone(), material_handle);
             }
 
-            // build geometry
+            // build general geometry which will be used to generate Meshes and Colliders
             let entity_geometry = map.build_entity_geometry(&map_texture_info);
-            println!("\n---- TOTALS entities: {}, entity_geometries: {}", map.entities.len(), entity_geometry.len());
 
-            let collision_geometry: Vec<ConvexCollision> = entity_geometry
-                .iter()
-                .map(|geo| geo.get_convex_collision())
-                .flatten() // without flattening we get a Vec per entity
-                .collect();
+            // build collision geometry, a Vec of ConvexCollision per entity
+            let collision_geometry: Vec<Vec<ConvexCollision>> =
+                entity_geometry.iter().map(|geo| geo.get_convex_collision()).collect();
 
-            // build engine representation
-            let mesh_surfaces: Vec<MeshSurface> = entity_geometry
+            // build visual geometry, a Vec of MeshSurfaces per entity
+            let mesh_surfaces: Vec<Vec<MeshSurface>> = entity_geometry
                 .iter()
-                .map(|data| get_brush_entity_visual_geometry(&data))
-                .flatten() // without flattening we get a Vec per entity
+                .enumerate()
+                .map(|(i, geo)| {
+                    if map.entities[i].fields.is_sensor() {
+                        Vec::new()
+                    } else {
+                        get_brush_entity_visual_geometry(&geo)
+                    }
+                })
                 .collect();
 
             let default_material_handle: Handle<StandardMaterial> =
                 load_context.set_labeled_asset("valve_map_default", LoadedAsset::new(Color::rgb(1.0, 0.0, 1.0).into()));
 
-            let mut entities = Vec::new();
-            for (i, mesh_surface) in mesh_surfaces.iter().enumerate() {
-                let material = {
-                    if let Some(tex_name) = &mesh_surface.texture {
-                        materials.get(tex_name).unwrap().clone()
-                    } else {
-                        default_material_handle.clone()
-                    }
-                };
+            // collect all our bevy handles and data per entity
+            let mut entities: Vec<ValveMapEntity> = map
+                .entities
+                .iter()
+                .zip(collision_geometry)
+                .map(|(e, cg)| ValveMapEntity::new(e.fields.clone(), cg))
+                .collect();
+            for (i, mesh_surfaces) in mesh_surfaces.iter().enumerate() {
+                for (j, surface) in mesh_surfaces.iter().enumerate() {
+                    let material = {
+                        if let Some(tex_name) = &surface.texture {
+                            materials.get(tex_name).unwrap().clone()
+                        } else {
+                            default_material_handle.clone()
+                        }
+                    };
 
-                let mesh = Mesh::from(mesh_surface);
-                let mesh_handle = load_context.set_labeled_asset(&format!("ValveMapMesh{}", i), LoadedAsset::new(mesh));
-                entities.push((mesh_surface.center_local(16.0), mesh_handle.clone(), material.clone()));
+                    let mesh = Mesh::from(surface);
+                    let mesh_handle =
+                        load_context.set_labeled_asset(&format!("ValveMapMesh{}_{}", i, j), LoadedAsset::new(mesh));
+
+                    entities[i].visual_geometry.push(ValveMapVisualGeometry::new(
+                        surface.center_local(16.0),
+                        mesh_handle.clone(),
+                        material.clone(),
+                    ));
+                }
             }
 
-            let valve_map = ValveMap {
-                collision_geometry,
-                entities,
-            };
+            let valve_map = ValveMap { entities };
             load_context.set_default_asset(LoadedAsset::new(valve_map));
 
             Ok(())
