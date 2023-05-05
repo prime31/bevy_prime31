@@ -66,6 +66,7 @@ impl AssetLoader for ValveMapLoader {
 
             // build geometry
             let entity_geometry = map.build_entity_geometry(&map_texture_info);
+            println!("\n---- TOTALS entities: {}, entity_geometries: {}", map.entities.len(), entity_geometry.len());
 
             let collision_geometry: Vec<ConvexCollision> = entity_geometry
                 .iter()
@@ -83,7 +84,6 @@ impl AssetLoader for ValveMapLoader {
             let default_material_handle: Handle<StandardMaterial> =
                 load_context.set_labeled_asset("valve_map_default", LoadedAsset::new(Color::rgb(1.0, 0.0, 1.0).into()));
 
-            // let mut world = World::default();
             let mut entities = Vec::new();
             for (i, mesh_surface) in mesh_surfaces.iter().enumerate() {
                 let material = {
@@ -97,18 +97,11 @@ impl AssetLoader for ValveMapLoader {
                 let mesh = Mesh::from(mesh_surface);
                 let mesh_handle = load_context.set_labeled_asset(&format!("ValveMapMesh{}", i), LoadedAsset::new(mesh));
                 entities.push((mesh_surface.center_local(16.0), mesh_handle.clone(), material.clone()));
-                // world.spawn(PbrBundle {
-                    // mesh: mesh_handle,
-                    // material,
-                    // transform: Transform::from_translation(mesh_surface.center_local(16.0)),
-                    // ..default()
-                // });
             }
 
             let valve_map = ValveMap {
                 collision_geometry,
                 entities,
-                // scene_handle: load_context.set_labeled_asset("valve_map_scene", LoadedAsset::new(Scene::new(world)))
             };
             load_context.set_default_asset(LoadedAsset::new(valve_map));
 

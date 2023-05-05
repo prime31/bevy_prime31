@@ -15,6 +15,7 @@ pub fn entity_build(textures: &TextureInfo, entity: &MapEntity) -> Geometry {
         .map(|brush| brush::build(textures, entity, brush))
         .collect();
 
+    println!("----- entity: {:?}, brushes: {}", entity.get_property("classname"), brush_geometry.len());
     Geometry::new(brush_geometry)
 }
 
