@@ -1,7 +1,5 @@
-use std::convert::TryInto;
-
 use bevy::{prelude::*, reflect::TypeUuid};
-use bevy_rapier3d::prelude::{Collider, Sensor, RigidBody, Velocity, Restitution};
+use bevy_rapier3d::prelude::{Collider, Sensor};
 
 use self::loader::{ValveMapEntity, ValveMapLoader};
 
@@ -46,8 +44,6 @@ fn handle_loaded_maps(
     mut commands: Commands,
     mut ev_asset: EventReader<AssetEvent<ValveMap>>,
     map_assets: ResMut<Assets<ValveMap>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     q: Query<(Entity, &Handle<ValveMap>)>,
     q_mod: Query<(Entity, &ValveMapHandled)>,
     q_players: Query<&mut Transform, With<ValveMapPlayer>>,
@@ -60,7 +56,7 @@ fn handle_loaded_maps(
                 VisibilityBundle::default(),
                 Name::new("ValveMapRoot"),
             ));
-            instantiate_map_entities(&mut commands, entity, map, q_players, meshes, materials);
+            instantiate_map_entities(&mut commands, entity, map, q_players);
             return;
         }
     }
@@ -74,7 +70,7 @@ fn handle_loaded_maps(
                 commands.entity(entity).despawn_descendants();
 
                 let map = map_assets.get(&map_bundle.0).unwrap();
-                instantiate_map_entities(&mut commands, entity, map, q_players, meshes, materials);
+                instantiate_map_entities(&mut commands, entity, map, q_players);
                 return;
             }
         }
@@ -85,9 +81,7 @@ fn instantiate_map_entities(
     commands: &mut Commands,
     entity: Entity,
     map: &ValveMap,
-    mut q_players: Query<&mut Transform, With<ValveMapPlayer>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut q_players: Query<&mut Transform, With<ValveMapPlayer>>
 ) {
     commands.entity(entity).with_children(|builder| {
         for map_entity in &map.entities {
@@ -111,30 +105,6 @@ fn instantiate_map_entities(
                     transform: Transform::from_translation(map_entity.fields.get_vec3_property("origin").unwrap()),
                     ..default()
                 });
-            }
-
-            if let Some("physics_ball") = map_entity.fields.get_property("classname") {
-                let position = map_entity.fields.get_vec3_property("origin").unwrap();
-                let size = map_entity.fields.get_f32_property("size").unwrap();
-                let velocity = map_entity.fields.get_vec3_property_raw("velocity").unwrap_or(Vec3::ZERO);
-
-                builder
-                    .spawn(RigidBody::Dynamic)
-                    .insert(Collider::ball(size))
-                    .insert(Restitution::new(1.0))
-                    .insert(Velocity {
-                        linvel: velocity,
-                        ..Default::default()
-                    })
-                    .insert(PbrBundle {
-                        mesh: meshes.add(shape::Icosphere {
-                            radius: size,
-                            subdivisions: 5,
-                        }.try_into().unwrap()),
-                        material: materials.add(Color::rgb(1.0, 0.0, 1.0).into()),
-                        transform: Transform::from_translation(position),
-                        ..Default::default()
-                    });
             }
 
             if let Some("spawn_point") = map_entity.fields.get_property("classname") {
