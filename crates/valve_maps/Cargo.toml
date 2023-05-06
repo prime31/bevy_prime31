@@ -19,3 +19,7 @@ bevy_rapier3d = "0.21.0"
 [dev-dependencies]
 cameras = { path = "../cameras" }
 bevy-inspector-egui = "0.18"
+
+
+[patch.crates-io]
+bevy_rapier3d = { git = 'https://github.com/dimforge/bevy_rapier' }

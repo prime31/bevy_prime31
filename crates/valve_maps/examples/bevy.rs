@@ -19,7 +19,7 @@ fn main() {
         .add_plugin(ValveMapPlugin)
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default().always_on_top())
+        .add_plugin(RapierDebugRenderPlugin::default())
         .add_startup_system(setup_scene)
         .add_plugin(FlycamPlugin)
         .insert_resource(AmbientLight {
@@ -58,7 +58,7 @@ fn setup_scene(
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-2.0, 6.5, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
-    });
+    }).insert(valve_maps::bevy::ValveMapPlayer);
 
     commands.spawn(ValveMapBundle {
         map: asset_server.load("test.map"),

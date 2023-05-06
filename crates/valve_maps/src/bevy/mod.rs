@@ -109,8 +109,10 @@ fn instantiate_map_entities(
 
             if let Some("spawn_point") = map_entity.fields.get_property("classname") {
                 let position = map_entity.fields.get_vec3_property("origin").unwrap();
+                let rotation = map_entity.fields.get_f32_property("angle").and_then(|a| Some(a - 90.)).unwrap_or(0.);
                 for mut tf in q_players.iter_mut() {
                     tf.translation = position;
+                    tf.rotation = Quat::from_rotation_y(rotation.to_radians());
                 }
             }
 
