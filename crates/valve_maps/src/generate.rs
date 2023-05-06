@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::{Vec2, Vec3};
 
-use crate::{
-    convert::quake_point_to_bevy_point,
-    formats::shared::{MapEntity, Plane},
-};
+use crate::formats::shared::{MapEntity, Plane};
 
 pub fn entity_build(textures: &TextureInfo, entity: &MapEntity) -> Geometry {
     // Build brushes
@@ -103,19 +100,14 @@ impl ConvexCollision {
             / self.points.len().max(1) as f32
     }
 
-    pub fn center_local(&self, inverse_scale_factor: f32) -> Vec3 {
-        quake_point_to_bevy_point(self.center(), inverse_scale_factor)
-    }
-
     /// this also converts from quake to bevy space
-    pub fn to_local(&self, inverse_scale_factor: f32) -> Vec<Vec3> {
-        let origin = self.center_local(inverse_scale_factor);
+    pub fn to_local(&self) -> Vec<Vec3> {
+        let origin = self.center();
 
         self.points
             .iter()
             .fold(Vec::with_capacity(self.points.len()), |mut acc, next| {
-                let vertex = quake_point_to_bevy_point(*next, inverse_scale_factor);
-                let vertex = vertex - origin;
+                let vertex = *next - origin;
                 acc.push(vertex);
                 acc
             })
@@ -124,19 +116,17 @@ impl ConvexCollision {
 
 pub mod brush {
     use crate::formats::shared::{Brush, MapEntity};
-    use bevy::prelude::Vec3;
 
     use super::{brush_plane, TextureInfo};
 
     #[derive(Debug, Clone)]
     pub struct BrushGeometry {
-        pub center: Vec3,
         pub plane_geometry: Vec<brush_plane::PlaneGeometry>,
     }
 
     impl<'a> BrushGeometry {
-        pub fn new(center: Vec3, plane_geometry: Vec<brush_plane::PlaneGeometry>) -> BrushGeometry {
-            BrushGeometry { center, plane_geometry }
+        pub fn new(plane_geometry: Vec<brush_plane::PlaneGeometry>) -> BrushGeometry {
+            BrushGeometry { plane_geometry }
         }
     }
 
@@ -147,15 +137,7 @@ pub mod brush {
             .map(|plane| brush_plane::build(textures, entity, planes, plane))
             .collect();
 
-        // Calculate center
-        let center = plane_geometry
-            .iter()
-            .fold(Vec3::new(0.0, 0.0, 0.0), |acc, plane_geometry| {
-                acc + plane_geometry.center
-            })
-            / plane_geometry.len().max(1) as f32;
-
-        BrushGeometry::new(center, plane_geometry)
+        BrushGeometry::new(plane_geometry)
     }
 }
 
@@ -164,23 +146,31 @@ pub mod brush_plane {
 
     use bevy::prelude::Vec3;
 
-    use crate::formats::shared::{MapEntity, Plane};
+    use crate::{
+        convert::{quake_direction_to_bevy_direction, quake_point_to_bevy_point},
+        formats::shared::{MapEntity, Plane},
+    };
 
     use super::build_plane_vertex;
     use super::{TextureInfo, Vertex};
 
     #[derive(Debug, Clone)]
     pub struct PlaneGeometry {
-        pub center: Vec3,
         pub vertices: Vec<Vertex>,
         pub indices: Vec<usize>,
         pub texture: Option<String>,
     }
 
     impl PlaneGeometry {
-        pub fn new(center: Vec3, vertices: Vec<Vertex>, indices: Vec<usize>, texture: Option<String>) -> PlaneGeometry {
+        pub fn new(mut vertices: Vec<Vertex>, indices: Vec<usize>, texture: Option<String>) -> PlaneGeometry {
+            // root point where we convert all points to bevy space
+            vertices.iter_mut().for_each(|v| {
+                v.vertex = quake_point_to_bevy_point(v.vertex, 16.0);
+                v.normal = quake_direction_to_bevy_direction(v.normal);
+            });
+
             PlaneGeometry {
-                center,
+                // center,
                 vertices,
                 indices,
                 texture,
@@ -243,7 +233,7 @@ pub mod brush_plane {
             vertex.vertex -= center;
         }
 
-        let u_axis = (plane.v1() - plane.v0()).normalize();
+        let u_axis = (plane.points[1] - plane.points[0]).normalize();
         let v_axis = plane.normal().cross(u_axis);
 
         let mut wound_vertices = local_vertices;
@@ -282,7 +272,7 @@ pub mod brush_plane {
             None => None,
         };
 
-        PlaneGeometry::new(center, world_vertices, indices, texture)
+        PlaneGeometry::new(world_vertices, indices, texture)
     }
 }
 
@@ -331,8 +321,8 @@ fn build_plane_vertex(
 }
 
 fn valve_uv(vertex: Vec3, brush_plane: &Plane, texture: &TextureSize) -> Vec2 {
-    let u_axis = brush_plane.texture.alignment.axes.u.normal.as_vec3();
-    let v_axis = brush_plane.texture.alignment.axes.v.normal.as_vec3();
+    let u_axis = brush_plane.texture.alignment.axes.u.normal;
+    let v_axis = brush_plane.texture.alignment.axes.v.normal;
 
     let u_offset = brush_plane.texture.alignment.axes.u.offset;
     let v_offset = brush_plane.texture.alignment.axes.v.offset;
@@ -404,8 +394,8 @@ fn phong_normal(p0: &Plane, p1: &Plane, p2: &Plane, phong_angle: Option<&str>) -
 }
 
 fn valve_tangent(brush_plane: &Plane) -> (Vec3, f32) {
-    let u_axis = brush_plane.texture.alignment.axes.u.normal.as_vec3();
-    let v_axis = brush_plane.texture.alignment.axes.v.normal.as_vec3();
+    let u_axis = brush_plane.texture.alignment.axes.u.normal;
+    let v_axis = brush_plane.texture.alignment.axes.v.normal;
 
     let v_sign = -brush_plane.normal().cross(u_axis).dot(v_axis).signum();
     (u_axis, v_sign)

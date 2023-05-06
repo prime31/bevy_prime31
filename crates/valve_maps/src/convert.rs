@@ -11,7 +11,7 @@ pub fn quake_point_to_bevy_point(point: Vec3, inverse_scale_factor: f32) -> Vec3
     quake_direction_to_bevy_direction(point) / inverse_scale_factor
 }
 
-fn quake_direction_to_bevy_direction(dir: Vec3) -> Vec3 {
+pub fn quake_direction_to_bevy_direction(dir: Vec3) -> Vec3 {
     let rot = Quat::from_axis_angle(Vec3::new(-1.0, 0.0, 0.0), 90.0_f32.to_radians());
     rot * dir
 }
@@ -52,19 +52,14 @@ impl MeshSurface {
             / self.vertices.len().max(1) as f32
     }
 
-    pub fn center_local(&self, inverse_scale_factor: f32) -> Vec3 {
-        quake_point_to_bevy_point(self.center(), inverse_scale_factor)
-    }
-
     /// this also converts from quake to bevy space
-    pub fn to_local(&self, inverse_scale_factor: f32) -> Vec<Vec3> {
-        let origin = self.center_local(inverse_scale_factor);
+    pub fn to_local(&self) -> Vec<Vec3> {
+        let origin = self.center();
 
         self.vertices
             .iter()
             .fold(Vec::with_capacity(self.vertices.len()), |mut acc, next| {
-                let vertex = quake_point_to_bevy_point(*next, inverse_scale_factor);
-                let vertex = vertex - origin;
+                let vertex = *next - origin;
                 acc.push(vertex);
                 acc
             })
@@ -78,13 +73,12 @@ impl From<&MeshSurface> for Mesh {
         let mut uvs: Vec<[f32; 2]> = Vec::new();
         let mut indices: Vec<u32> = Vec::new();
 
-        for vert in mesh_surface.to_local(16.0).iter() {
+        for vert in mesh_surface.to_local().iter() {
             positions.push([vert.x, vert.y, vert.z]);
         }
 
         for normal in mesh_surface.normals.iter() {
-            let n = quake_direction_to_bevy_direction(*normal);
-            normals.push([n.x, n.y, n.z]);
+            normals.push([normal.x, normal.y, normal.z]);
         }
 
         if let Some(node_uvs) = &mesh_surface.uvs {

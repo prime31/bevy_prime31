@@ -140,7 +140,7 @@ impl AssetLoader for ValveMapLoader {
                         load_context.set_labeled_asset(&format!("ValveMapMesh{}_{}", i, j), LoadedAsset::new(mesh));
 
                     entities[i].visual_geometry.push(ValveMapVisualGeometry::new(
-                        surface.center_local(16.0),
+                        surface.center(),
                         mesh_handle.clone(),
                         material.clone(),
                     ));

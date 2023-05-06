@@ -29,17 +29,15 @@ pub struct Map {
 
 impl Map {
     pub fn get_texture_names(&self) -> Vec<&String> {
-        let mut textures = Vec::new();
-
-        for ent in self.entities.iter() {
-            for brushes in ent.brushes.iter() {
-                for planes in brushes.planes.iter() {
-                    if planes.texture.name != "__TB_empty" {
-                        textures.push(&planes.texture.name);
-                    }
-                }
-            }
-        }
+        let mut textures: Vec<_> = self
+            .entities
+            .iter()
+            .flat_map(|e| {
+                e.brushes
+                    .iter()
+                    .flat_map(|b| b.planes.iter().filter(|p| p.texture.name != "__TB_empty").map(|p| &p.texture.name))
+            })
+            .collect();
 
         textures.sort();
         textures.dedup();

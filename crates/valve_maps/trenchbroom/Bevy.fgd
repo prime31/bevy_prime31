@@ -1,5 +1,4 @@
-@SolidClass = worldspawn : "World Entity" [
-]
+@SolidClass = worldspawn : "World Entity" []
 
 @BaseClass color(255 255 40) = Light[
 	color(color255) : "Light color"  : "255 255 255"
@@ -8,21 +7,12 @@
 	shadows_enabled(integer) : "Shadows Enabled" : 0
 ]
 
-@PointClass size(-8 -8 -8, 8 8 8) = spawn_point : "Spawn Point" [
-]
+@PointClass size(-8 -8 -8, 8 8 8) = spawn_point : "Spawn Point" []
 
 @PointClass size(-8 -8 -8, 8 8 8) base(Light) = light : "Invisible light source" [
 	angle(float) : "Rotation Angle"  : "0"
 ]
 
-@PointClass size(-8 -8 -8, 8 8 8) = physics_ball : "Physics Ball" [
-	mass(float) : ""  : "1"
-	size(float) : ""  : "1"
-	velocity(string) : "Initial velocity"  : "0 0 0"
-]
+@SolidClass = illusionary : "Non-colliding Brush" []
 
-@SolidClass = illusionary : "Non-colliding Brush" [
-]
-
-@SolidClass = sensor : "Sensor Volume" [
-]
+@SolidClass = sensor : "Sensor Volume" []

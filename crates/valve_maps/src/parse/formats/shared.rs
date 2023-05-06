@@ -1,4 +1,4 @@
-use bevy::prelude::{Vec3, Color};
+use bevy::prelude::{Color, Vec3};
 
 use crate::convert::quake_point_to_bevy_point;
 
@@ -15,7 +15,6 @@ use {
                 combinator::{iterator, map, opt, recognize},
                 error::ParseError,
                 multi::{fold_many0, many0},
-                number::float,
                 sequence::{delimited, pair, preceded, terminated},
             },
             Input, Parse, ParseResult,
@@ -108,7 +107,18 @@ impl Fields {
             let x: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
             let y: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
             let z: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            return Some(quake_point_to_bevy_point(Vec3::new(x, y, z), 16.0))
+            return Some(quake_point_to_bevy_point(Vec3::new(x, y, z), 16.0));
+        }
+        None
+    }
+
+    pub fn get_vec3_property_raw(&self, name: &str) -> Option<Vec3> {
+        if let Some(prop) = self.0.get(name) {
+            let mut comps = prop.split(' ');
+            let x: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
+            let y: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
+            let z: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
+            return Some(Vec3::new(x, y, z));
         }
         None
     }
@@ -183,40 +193,27 @@ where
     }
 }
 
-/// Representation of a plane with three points describing a
-/// half-space and a texture. In a map file, it usually looks
+/// Representation of a plane with three points describing a half-space and a texture. In a map file, it usually looks
 /// something like this with the valve format:
 /// ```plain
 /// ( 816 -796 356 ) ( 816 -804 356 ) ( 808 -804 356 ) stone1_3 [ 0 -1 0 -20 ] [ 1 0 0 16 ] -0 1 1
 /// ```
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Plane {
-    pub points: [Vector3; 3],
+    pub points: [Vec3; 3],
     pub texture: Texture,
 }
 
 impl Plane {
     pub fn normal(&self) -> Vec3 {
-        let v0v1 = self.v1() - self.v0();
-        let v0v2 = self.v2() - self.v0();
+        let v0v1 = self.points[1] - self.points[0];
+        let v0v2 = self.points[2] - self.points[0];
         v0v2.cross(v0v1).normalize()
     }
 
     pub fn dist(&self) -> f32 {
         let n = self.normal();
-        n.dot(self.points[0].as_vec3())
-    }
-
-    pub fn v0(&self) -> Vec3 {
-        self.points[0].as_vec3()
-    }
-
-    pub fn v1(&self) -> Vec3 {
-        self.points[1].as_vec3()
-    }
-
-    pub fn v2(&self) -> Vec3 {
-        self.points[2].as_vec3()
+        n.dot(self.points[0])
     }
 }
 
@@ -233,39 +230,6 @@ where
             ),)),
             texture = parse
         )(input)
-    }
-}
-
-/// A simple three-dimensional vector using `f32`s.
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
-pub struct Vector3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-impl Vector3 {
-    pub fn as_vec3(self) -> Vec3 {
-        return Vec3::new(self.x, self.y, self.z);
-    }
-}
-
-impl Into<Vector3> for Vec3 {
-    fn into(self) -> Vector3 {
-        return Vector3 {
-            x: self.x,
-            y: self.y,
-            z: self.z,
-        };
-    }
-}
-
-impl<'i, E> Parse<'i, E> for Vector3
-where
-    E: ParseError<Input<'i>> + Clone,
-{
-    fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Vector3: x = sep_terminated(float), y = sep_terminated(float), z = float)(input)
     }
 }
 

@@ -1,8 +1,10 @@
+use glam::Vec3;
+
 use {
     crate::parse::{
         common::{fields, parse},
         formats::{
-            shared::{Vector3, separator, sep_terminated, maybe_sep_terminated}
+            shared::{separator, sep_terminated, maybe_sep_terminated}
         },
         core::{
             Parse,
@@ -75,10 +77,19 @@ where E: ParseError<Input<'i>> + Clone {
     }
 }
 
+impl<'i, E> Parse<'i, E> for Vec3
+where
+    E: ParseError<Input<'i>> + Clone,
+{
+    fn parse(input: Input<'i>) -> ParseResult<Self, E> {
+        fields!(Vec3: x = sep_terminated(float), y = sep_terminated(float), z = float)(input)
+    }
+}
+
 /// A [texture alignment](TextureAlignment) axis in Valve's map format.
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Axis {
-    pub normal: Vector3,
+    pub normal: Vec3,
     pub offset: f32
 }
 

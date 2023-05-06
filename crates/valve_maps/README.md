@@ -41,7 +41,15 @@ commands.spawn(ValveMapBundle {
 });
 ```
 
+### Customization
+
+If you add a "spawn_point" entity and have an Entity in Bevy with a `ValveMapPlayer` Component it will be warped to
+the spawn point when the map loads and each time it is hot reloaded.
+
 
 Much of the code was sourced from the following repos:
 [nomap](https://github.com/reslario/nomap)
 [quarchitect](https://github.com/QodotPlugin/quarchitect/)
+
+Images from here:
+[wads](https://www.quaddicted.com/files/wads/)
