@@ -22,8 +22,14 @@ pub struct ValveMapBundle {
     pub computed_visibility: ComputedVisibility,
 }
 
+/// any Entities with this Component will be warped to the "classname = spawn_point" from the map on map load or reload
 #[derive(Component)]
-pub struct ValveMapHandled(pub Handle<ValveMap>);
+pub struct ValveMapPlayer;
+
+/// Component added to the Entity that the Handle<ValveMap> was added to after the map is loaded. Used later
+/// during hot-reload to identify the map and swap in the new one.
+#[derive(Component)]
+struct ValveMapHandled(pub Handle<ValveMap>);
 
 #[derive(Default)]
 pub struct ValveMapPlugin;
@@ -42,6 +48,7 @@ fn handle_loaded_maps(
     assets: ResMut<Assets<ValveMap>>,
     q: Query<(Entity, &Handle<ValveMap>)>,
     q_mod: Query<(Entity, &ValveMapHandled)>,
+    q_players: Query<&mut Transform, With<ValveMapPlayer>>
 ) {
     for (entity, map_bundle) in q.iter() {
         if let Some(map) = assets.get(&map_bundle) {
@@ -51,7 +58,8 @@ fn handle_loaded_maps(
                 VisibilityBundle::default(),
                 Name::new("ValveMapRoot"),
             ));
-            instantiate_map_entities(&mut commands, entity, map);
+            instantiate_map_entities(&mut commands, entity, map, q_players);
+            return;
         }
     }
 
@@ -64,13 +72,14 @@ fn handle_loaded_maps(
                 commands.entity(entity).despawn_descendants();
 
                 let map = assets.get(&map_bundle.0).unwrap();
-                instantiate_map_entities(&mut commands, entity, map);
+                instantiate_map_entities(&mut commands, entity, map, q_players);
+                return;
             }
         }
     }
 }
 
-fn instantiate_map_entities(commands: &mut Commands, entity: Entity, map: &ValveMap) {
+fn instantiate_map_entities(commands: &mut Commands, entity: Entity, map: &ValveMap, mut q_players: Query<&mut Transform, With<ValveMapPlayer>>) {
     commands.entity(entity).with_children(|builder| {
         for map_entity in &map.entities {
             println!("------------ class: {:?}, visuals: {}", map_entity.fields.get_property("classname"), map_entity.visual_geometry.len());
@@ -89,6 +98,13 @@ fn instantiate_map_entities(commands: &mut Commands, entity: Entity, map: &Valve
                     transform: Transform::from_translation(map_entity.fields.get_vec3_property("origin").unwrap()),
                     ..default()
                 });
+            }
+
+            if let Some("spawn_point") = map_entity.fields.get_property("classname") {
+                let position = map_entity.fields.get_vec3_property("origin").unwrap();
+                for mut tf in q_players.iter_mut() {
+                    tf.translation = position;
+                }
             }
 
             for visual_geo in &map_entity.visual_geometry {

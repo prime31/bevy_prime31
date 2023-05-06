@@ -11,7 +11,7 @@ pub fn quake_point_to_bevy_point(point: Vec3, inverse_scale_factor: f32) -> Vec3
     quake_direction_to_bevy_direction(point) / inverse_scale_factor
 }
 
-pub fn quake_direction_to_bevy_direction(dir: Vec3) -> Vec3 {
+fn quake_direction_to_bevy_direction(dir: Vec3) -> Vec3 {
     let rot = Quat::from_axis_angle(Vec3::new(-1.0, 0.0, 0.0), 90.0_f32.to_radians());
     rot * dir
 }

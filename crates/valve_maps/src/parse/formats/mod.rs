@@ -34,7 +34,9 @@ impl Map {
         for ent in self.entities.iter() {
             for brushes in ent.brushes.iter() {
                 for planes in brushes.planes.iter() {
-                    if planes.texture.name != "__TB_empty" { textures.push(&planes.texture.name); }
+                    if planes.texture.name != "__TB_empty" {
+                        textures.push(&planes.texture.name);
+                    }
                 }
             }
         }
