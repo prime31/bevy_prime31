@@ -3,3 +3,4 @@
 .DS_Store
 crates/valve_maps/target
 crates/valve_maps/assets/autosave
+crates/fps_controller/target

@@ -1,0 +1,22 @@
+[package]
+name = "fps_controller"
+version = "0.0.1"
+edition = "2018"
+description = ""
+readme = "README.md"
+
+[workspace]
+resolver = "2"
+
+[dependencies]
+bevy = "0.10"
+bevy_rapier3d = "0.21.0"
+
+[dev-dependencies]
+cameras = { path = "../cameras" }
+valve_maps = { path = "../valve_maps" }
+bevy-inspector-egui = "0.18"
+
+
+[patch.crates-io]
+bevy_rapier3d = { git = 'https://github.com/dimforge/bevy_rapier' }

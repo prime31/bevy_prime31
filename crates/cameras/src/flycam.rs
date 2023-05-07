@@ -51,10 +51,14 @@ impl Default for FlycamControls {
     }
 }
 
-fn spawn_camera(mut commands: Commands, query: Query<(Entity, With<Camera>)>) {
-    commands
-        .entity(query.get_single().unwrap().0)
-        .insert(FlycamControls::default());
+fn spawn_camera(mut commands: Commands, query: Query<(Entity, &Camera)>) {
+    for (entity, camera) in query.iter() {
+        if camera.order != 0 {
+            continue;
+        }
+
+        commands.entity(entity).insert(FlycamControls::default());
+    }
 }
 
 fn camera_movement(
@@ -68,29 +72,22 @@ fn camera_movement(
     }
 
     let if_then_1 = |b| if b { 1.0 } else { 0.0 };
-    let forward = if_then_1(keyboard_input.pressed(flycam.key_forward))
-        - if_then_1(keyboard_input.pressed(flycam.key_back));
-    let sideways = if_then_1(keyboard_input.pressed(flycam.key_right))
-        - if_then_1(keyboard_input.pressed(flycam.key_left));
-    let up = if_then_1(keyboard_input.pressed(flycam.key_up))
-        - if_then_1(keyboard_input.pressed(flycam.key_down));
+    let forward =
+        if_then_1(keyboard_input.pressed(flycam.key_forward)) - if_then_1(keyboard_input.pressed(flycam.key_back));
+    let sideways =
+        if_then_1(keyboard_input.pressed(flycam.key_right)) - if_then_1(keyboard_input.pressed(flycam.key_left));
+    let up = if_then_1(keyboard_input.pressed(flycam.key_up)) - if_then_1(keyboard_input.pressed(flycam.key_down));
 
     if forward == 0.0 && sideways == 0.0 && up == 0.0 {
         return;
     }
 
-    let speed = if keyboard_input.pressed(flycam.key_boost) {
-        20.0
-    } else {
-        5.0
-    };
+    let speed = if keyboard_input.pressed(flycam.key_boost) { 20.0 } else { 5.0 };
 
-    let movement =
-        Vec3::new(sideways, forward, up).normalize_or_zero() * speed * time.delta_seconds();
+    let movement = Vec3::new(sideways, forward, up).normalize_or_zero() * speed * time.delta_seconds();
 
-    let diff = cam_transform.forward() * movement.y
-        + cam_transform.right() * movement.x
-        + cam_transform.up() * movement.z;
+    let diff =
+        cam_transform.forward() * movement.y + cam_transform.right() * movement.x + cam_transform.up() * movement.z;
     cam_transform.translation += diff;
 }
 
@@ -104,9 +101,7 @@ fn camera_look(
     let (mut flycam, mut transform) = query.single_mut();
     let window = window_q.get_single().unwrap();
 
-    if !mouse_input.pressed(MouseButton::Left)
-        && window.cursor.grab_mode != CursorGrabMode::Confined
-    {
+    if !mouse_input.pressed(MouseButton::Left) && window.cursor.grab_mode != CursorGrabMode::Confined {
         return;
     }
     if !flycam.enable_look {
