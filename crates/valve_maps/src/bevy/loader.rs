@@ -9,9 +9,9 @@ use bevy::{
 };
 
 use crate::{
-    convert::{MeshSurface, quake_point_to_bevy_point},
+    convert::{quake_point_to_bevy_point, MeshSurface},
     formats::shared::Fields,
-    generate::{ConvexCollision, TextureInfo, Geometry},
+    generate::{ConvexCollision, Geometry, TextureInfo},
 };
 
 use super::ValveMap;
@@ -141,50 +141,48 @@ fn texture_sampler<'a>() -> SamplerDescriptor<'a> {
     }
 }
 
-impl crate::Map {
-    /// loads all Textures and creates a StandardMaterial per Texture. Grabs the texture dimensions as well for uv calculations
-    async fn load_textures(
-        &self,
-        load_context: &mut LoadContext<'_>,
-    ) -> Result<(TextureInfo, HashMap<String, Handle<StandardMaterial>>), bevy::asset::Error> {
-        let mut map_texture_info = TextureInfo::new();
-        let mut materials = HashMap::new();
+/// loads all Textures and creates a StandardMaterial per Texture. Grabs the texture dimensions as well for uv calculations
+async fn load_textures(
+    map: &crate::Map,
+    load_context: &mut LoadContext<'_>,
+) -> Result<(TextureInfo, HashMap<String, Handle<StandardMaterial>>), bevy::asset::Error> {
+    let mut map_texture_info = TextureInfo::new();
+    let mut materials = HashMap::new();
 
-        // load all the textures since we will need their size then stuff them in materials
-        for texture_name in self.get_texture_names() {
-            let file = format!("textures/{}.png", texture_name);
-            let bytes = load_context.read_asset_bytes(&file).await?;
+    // load all the textures since we will need their size then stuff them in materials
+    for texture_name in map.get_texture_names() {
+        let file = format!("textures/{}.png", texture_name);
+        let bytes = load_context.read_asset_bytes(&file).await?;
 
-            // load the texture and stick it in the AssetServer
-            let mut texture = Image::from_buffer(
-                &bytes,
-                ImageType::Extension("png"),
-                CompressedImageFormats::all(),
-                false,
-            )?;
+        // load the texture and stick it in the AssetServer
+        let mut texture = Image::from_buffer(
+            &bytes,
+            ImageType::Extension("png"),
+            CompressedImageFormats::all(),
+            false,
+        )?;
 
-            texture.sampler_descriptor = ImageSampler::Descriptor(texture_sampler());
-            map_texture_info.add_texture(
-                &texture_name,
-                texture.texture_descriptor.size.width,
-                texture.texture_descriptor.size.height,
-            );
+        texture.sampler_descriptor = ImageSampler::Descriptor(texture_sampler());
+        map_texture_info.add_texture(
+            &texture_name,
+            texture.texture_descriptor.size.width,
+            texture.texture_descriptor.size.height,
+        );
 
-            // create a material with texture
-            let texture_handle =
-                load_context.set_labeled_asset(&format!("textures/{}.png", texture_name), LoadedAsset::new(texture));
-            let material = StandardMaterial {
-                base_color_texture: Some(texture_handle.clone()),
-                alpha_mode: AlphaMode::Opaque,
-                ..default()
-            };
-            let material_handle =
-                load_context.set_labeled_asset(&format!("materials/{}", texture_name), LoadedAsset::new(material));
-            materials.insert(texture_name.clone(), material_handle);
-        }
-
-        Ok((map_texture_info, materials))
+        // create a material with texture
+        let texture_handle =
+            load_context.set_labeled_asset(&format!("textures/{}.png", texture_name), LoadedAsset::new(texture));
+        let material = StandardMaterial {
+            base_color_texture: Some(texture_handle.clone()),
+            alpha_mode: AlphaMode::Opaque,
+            ..default()
+        };
+        let material_handle =
+            load_context.set_labeled_asset(&format!("materials/{}", texture_name), LoadedAsset::new(material));
+        materials.insert(texture_name.clone(), material_handle);
     }
+
+    Ok((map_texture_info, materials))
 }
 
 async fn load_obj<'a, 'b>(bytes: &'a [u8], load_context: &'a mut LoadContext<'b>) -> Result<(), bevy::asset::Error> {
@@ -192,7 +190,7 @@ async fn load_obj<'a, 'b>(bytes: &'a [u8], load_context: &'a mut LoadContext<'b>
     let map = super::super::parse(string).unwrap();
 
     // load all the textures since we will need their size then stuff them in materials
-    let (map_texture_info, materials) = map.load_textures(load_context).await?;
+    let (map_texture_info, materials) = load_textures(&map, load_context).await?;
 
     // build general geometry which will be used to generate Meshes and Colliders
     let entity_geometry = map.build_entity_geometry(&map_texture_info);

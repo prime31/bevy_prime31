@@ -1,7 +1,5 @@
 use bevy::prelude::Vec3;
 
-
-
 use super::valve::TextureAlignment;
 
 use {
@@ -113,7 +111,9 @@ where
                 HashMap::new(),
                 |mut map, (k, v)| {
                     // filter out internal TrenchBroom data
-                    if !k.starts_with("_tb_") { map.insert(k.into(), v.into()); }
+                    if !k.starts_with("_tb_") {
+                        map.insert(k.into(), v.into());
+                    }
                     map
                 },
             ),

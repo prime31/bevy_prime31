@@ -10,9 +10,7 @@ resolver = "2"
 
 [dependencies]
 bevy = "0.10"
-glam = "*"
 nom = "5.1.2"
-arrayvec = "0.5.1"
 nom-fields = "0.1.1"
 bevy_rapier3d = "0.21.0"
 

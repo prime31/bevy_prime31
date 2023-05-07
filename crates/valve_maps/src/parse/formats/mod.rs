@@ -44,6 +44,8 @@ impl Map {
         textures
     }
 
+    /// takes the raw, parsed map data and generates usable verts/uvs/normals/tangents using plane intersection
+    /// and the Texture sizes
     pub fn build_entity_geometry(&self, textures: &TextureInfo) -> Vec<Geometry> {
         // Build geometry
         self.entities

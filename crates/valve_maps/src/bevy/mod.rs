@@ -1,5 +1,5 @@
 use bevy::{prelude::*, reflect::TypeUuid};
-use bevy_rapier3d::prelude::{Collider, Sensor, ActiveEvents};
+use bevy_rapier3d::prelude::{Collider, Sensor, ActiveEvents, RigidBody};
 
 use self::loader::{ValveMapEntity, ValveMapLoader};
 
@@ -132,6 +132,7 @@ fn instantiate_map_entities(
             for geo in &map_entity.collision_geometry {
                 let mut entity = builder.spawn((
                     Collider::convex_hull(&geo.to_local()).unwrap(),
+                    RigidBody::Fixed, // is this necessary?
                     GlobalTransform::default(),
                     Transform::from_translation(geo.center()),
                     Name::new("ValveMapBrushCollider"),

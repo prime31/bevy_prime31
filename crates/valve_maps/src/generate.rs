@@ -7,6 +7,8 @@ use crate::{
     formats::shared::{MapEntity, Plane},
 };
 
+use self::brush::BrushGeometry;
+
 pub fn entity_build(textures: &TextureInfo, entity: &MapEntity) -> Geometry {
     // Build brushes
     let brush_geometry: Vec<brush::BrushGeometry> = entity
@@ -50,11 +52,11 @@ impl TextureSize {
 
 #[derive(Debug, Clone)]
 pub struct Geometry {
-    pub brush_geometry: Vec<brush::BrushGeometry>,
+    pub brush_geometry: Vec<BrushGeometry>,
 }
 
 impl Geometry {
-    pub fn new(brush_geometry: Vec<brush::BrushGeometry>) -> Geometry {
+    pub fn new(brush_geometry: Vec<BrushGeometry>) -> Geometry {
         Geometry { brush_geometry }
     }
 
@@ -206,11 +208,11 @@ pub mod brush {
 
     #[derive(Debug, Clone)]
     pub struct BrushGeometry {
-        pub plane_geometry: Vec<brush_plane::PlaneGeometry>,
+        pub plane_geometry: Vec<PlaneGeometry>,
     }
 
     impl BrushGeometry {
-        pub fn new(plane_geometry: Vec<brush_plane::PlaneGeometry>) -> BrushGeometry {
+        pub fn new(plane_geometry: Vec<PlaneGeometry>) -> BrushGeometry {
             BrushGeometry { plane_geometry }
         }
 

@@ -1,4 +1,4 @@
-use glam::Vec3;
+use bevy::prelude::Vec3;
 
 use {
     crate::parse::{
@@ -22,15 +22,15 @@ use {
 };
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct Vector2 {
+pub struct Vec2 {
     pub x: f32,
     pub y: f32
 }
 
-impl <'i, E> Parse<'i, E> for Vector2
+impl <'i, E> Parse<'i, E> for Vec2
 where E: ParseError<Input<'i>> + Clone {
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Vector2:
+        fields!(Vec2:
             x = sep_terminated(float),
             y = float
         )(input)
@@ -118,7 +118,7 @@ impl <'i, E> Parse<'i, E> for Scale
 where E: ParseError<Input<'i>> + Clone {
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
         map(
-            Vector2::parse,
+            Vec2::parse,
             |vec| Scale {
                 u: vec.x,
                 v: vec.y
