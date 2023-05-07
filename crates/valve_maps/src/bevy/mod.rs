@@ -1,5 +1,5 @@
 use bevy::{prelude::*, reflect::TypeUuid};
-use bevy_rapier3d::prelude::{Collider, Sensor};
+use bevy_rapier3d::prelude::{Collider, Sensor, ActiveEvents};
 
 use self::loader::{ValveMapEntity, ValveMapLoader};
 
@@ -86,30 +86,31 @@ fn instantiate_map_entities(
     commands.entity(entity).with_children(|builder| {
         for map_entity in &map.entities {
             println!(
-                "------------ class: {:?}, visuals: {}",
-                map_entity.fields.get_property("classname"),
-                map_entity.visual_geometry.len()
+                "------------ class: {:?}, visuals: {}, collisions: {}",
+                map_entity.get_property("classname"),
+                map_entity.visual_geometry.len(),
+                map_entity.collision_geometry.len()
             );
-            let is_sensor = map_entity.fields.is_sensor();
+            let is_sensor = map_entity.is_sensor();
 
             // handle any point types
-            if let Some("light") = map_entity.fields.get_property("classname") {
+            if let Some("light") = map_entity.get_property("classname") {
                 builder.spawn(PointLightBundle {
                     point_light: PointLight {
-                        color: map_entity.fields.get_color_property("color").unwrap_or(Color::WHITE),
-                        intensity: map_entity.fields.get_f32_property("intensity").unwrap_or(800.),
-                        range: map_entity.fields.get_f32_property("range").unwrap_or(20.),
-                        shadows_enabled: map_entity.fields.get_bool_property("shadows_enabled").unwrap_or(false),
+                        color: map_entity.get_color_property("color").unwrap_or(Color::WHITE),
+                        intensity: map_entity.get_f32_property("intensity").unwrap_or(800.),
+                        range: map_entity.get_f32_property("range").unwrap_or(20.),
+                        shadows_enabled: map_entity.get_bool_property("shadows_enabled").unwrap_or(false),
                         ..default()
                     },
-                    transform: Transform::from_translation(map_entity.fields.get_vec3_property("origin").unwrap()),
+                    transform: Transform::from_translation(map_entity.get_vec3_property("origin").unwrap()),
                     ..default()
                 });
             }
 
-            if let Some("spawn_point") = map_entity.fields.get_property("classname") {
-                let position = map_entity.fields.get_vec3_property("origin").unwrap();
-                let rotation = map_entity.fields.get_f32_property("angle").and_then(|a| Some(a - 90.)).unwrap_or(0.);
+            if let Some("spawn_point") = map_entity.get_property("classname") {
+                let position = map_entity.get_vec3_property("origin").unwrap();
+                let rotation = map_entity.get_f32_property("angle").and_then(|a| Some(a - 90.)).unwrap_or(0.);
                 for mut tf in q_players.iter_mut() {
                     tf.translation = position;
                     tf.rotation = Quat::from_rotation_y(rotation.to_radians());
@@ -137,7 +138,7 @@ fn instantiate_map_entities(
                 ));
 
                 if is_sensor {
-                    entity.insert(Sensor);
+                    entity.insert((Sensor, ActiveEvents::COLLISION_EVENTS));
                 }
             }
         }

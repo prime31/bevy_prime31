@@ -9,10 +9,10 @@
 
 @PointClass size(-8 -8 -8, 8 8 8) = spawn_point : "Spawn Point" []
 
-@PointClass size(-8 -8 -8, 8 8 8) base(Light) = light : "Invisible light source" [
+@PointClass size(-4 -4 -4, 4 4 4) base(Light) = light : "Invisible light source" [
 	angle(float) : "Rotation Angle"  : "0"
 ]
 
-@SolidClass = illusionary : "Non-colliding Brush" []
+@SolidClass = geometry : "Standard Geometry Brush" []
 
 @SolidClass = sensor : "Sensor Volume" []

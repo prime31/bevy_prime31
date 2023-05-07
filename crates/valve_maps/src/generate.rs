@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use bevy::prelude::{Vec2, Vec3};
 
-use crate::formats::shared::{MapEntity, Plane};
+use crate::{
+    convert::MeshSurface,
+    formats::shared::{MapEntity, Plane},
+};
 
 pub fn entity_build(textures: &TextureInfo, entity: &MapEntity) -> Geometry {
     // Build brushes
@@ -55,7 +58,7 @@ impl Geometry {
         Geometry { brush_geometry }
     }
 
-    pub fn get_convex_collision(&self) -> Vec<ConvexCollision> {
+    pub fn get_collision_geometry(&self) -> Vec<ConvexCollision> {
         self.brush_geometry
             .iter()
             .map(|brush_geo| {
@@ -80,6 +83,88 @@ impl Geometry {
                 ConvexCollision::new(points)
             })
             .collect()
+    }
+
+    pub fn get_visual_geometry(&self) -> Vec<MeshSurface> {
+        let textures: Vec<_> = self
+            .brush_geometry
+            .iter()
+            .flat_map(|brush| brush.plane_geometry.iter().map(|plane| plane.texture.clone()))
+            .filter_map(|t| t)
+            .collect();
+
+        // Collect unique texture names
+        let mut textures: Vec<Option<String>> = textures
+            .clone()
+            .into_iter()
+            .enumerate()
+            .filter(texture_filter::unique(&textures))
+            .unzip::<usize, String, Vec<usize>, Vec<String>>()
+            .1
+            .into_iter()
+            .map(Some)
+            .collect();
+
+        // Account for untextured brushes
+        textures.push(None);
+
+        // Build mesh surfaces for this texture
+        let mesh_surfaces: Vec<MeshSurface> = textures
+            .into_iter()
+            .flat_map(self.build_mesh_surface())
+            .collect();
+
+        // Return mesh-type visual geometry
+        mesh_surfaces
+    }
+
+    fn build_mesh_surface<'a>(&'a self) -> impl Fn(Option<String>) -> Option<MeshSurface> + 'a {
+        move |texture| {
+            let (vertices, indices) = self.gather_entity_geometry(&texture);
+
+            if vertices.is_empty() {
+                return None;
+            }
+
+            let verts: Vec<Vec3> = vertices.iter().map(|vertex| vertex.vertex).collect();
+            let normals: Vec<Vec3> = vertices.iter().map(|vertex| vertex.normal).collect();
+            let tangents: Vec<(Vec3, f32)> = vertices.iter().map(|vertex| vertex.tangent).collect();
+            let uvs: Option<Vec<Vec2>> = vertices.iter().map(|vertex| vertex.uv).collect();
+
+            let mesh_surface = MeshSurface::new(texture, verts, normals, tangents, uvs, indices);
+            Some(mesh_surface)
+        }
+    }
+
+    fn gather_entity_geometry<'a>(&'a self, texture: &Option<String>) -> (Vec<&'a Vertex>, Vec<usize>) {
+        let brush_geometry: Vec<(Vec<&Vertex>, Vec<usize>)> = self
+            .brush_geometry
+            .iter()
+            .map(|brush_geometry| brush_geometry.gather_brush_geometry(texture))
+            .collect();
+
+        let vertices: Vec<&Vertex> = brush_geometry
+            .iter()
+            .flat_map(|(vertices, _indices)| (*vertices).clone())
+            .collect();
+
+        let mut index_offset: usize = 0;
+        let indices: Vec<usize> = brush_geometry
+            .iter()
+            .flat_map(|(vertices, indices)| {
+                let indices = indices.clone().into_iter().map(move |index| index + index_offset);
+                index_offset += vertices.len();
+                indices
+            })
+            .collect();
+
+        (vertices, indices)
+    }
+}
+
+mod texture_filter {
+    pub fn unique<'a>(textures: &'a [String]) -> impl Fn(&(usize, String)) -> bool + 'a {
+        move |(i, texture): &(usize, String)| textures.iter().skip(i + 1).find(|comp| *comp == texture).is_none()
     }
 }
 
@@ -117,17 +202,86 @@ impl ConvexCollision {
 pub mod brush {
     use crate::formats::shared::{Brush, MapEntity};
 
-    use super::{brush_plane, TextureInfo};
+    use super::{brush_plane::{self, PlaneGeometry}, TextureInfo, Vertex};
 
     #[derive(Debug, Clone)]
     pub struct BrushGeometry {
         pub plane_geometry: Vec<brush_plane::PlaneGeometry>,
     }
 
-    impl<'a> BrushGeometry {
+    impl BrushGeometry {
         pub fn new(plane_geometry: Vec<brush_plane::PlaneGeometry>) -> BrushGeometry {
             BrushGeometry { plane_geometry }
         }
+
+        pub fn gather_brush_geometry<'a>(&'a self, texture: &Option<String>) -> (Vec<&'a Vertex>, Vec<usize>) {
+            let plane_geometry = &self.plane_geometry;
+
+            let vertices: Vec<&Vertex> = plane_geometry
+                .iter()
+                .filter(|geo| geo.texture == *texture)
+                .flat_map(move |plane_geometry| &plane_geometry.vertices)
+                .collect();
+
+            let mut index_offset: usize = 0;
+
+            let concat_indices = |plane_geometry: &PlaneGeometry| {
+                let indices = plane_geometry
+                    .indices
+                    .clone()
+                    .into_iter()
+                    .map(move |index| index + index_offset);
+
+                index_offset += plane_geometry.vertices.len();
+
+                indices
+            };
+
+            let indices: Vec<usize> = plane_geometry
+                .iter()
+                .filter(|geo| geo.texture == *texture)
+                .flat_map(concat_indices)
+                .collect();
+
+            filter_vertices(&vertices, indices)
+        }
+    }
+
+    fn filter_vertices<'a>(vertices: &[&'a Vertex], indices: Vec<usize>) -> (Vec<&'a Vertex>, Vec<usize>) {
+        let mut indices = indices;
+        let mut new_indices: Vec<usize> = Vec::new();
+        let mut new_vertices: Vec<&Vertex> = Vec::new();
+
+        for (i, vertex) in vertices.iter().enumerate() {
+            if unique(i, vertex, &vertices) {
+                new_indices.push(i);
+                new_vertices.push(vertex);
+            } else {
+                let position = vertices.iter().position(|comp| comp.vertex == vertex.vertex).unwrap();
+                indices = indices
+                    .iter()
+                    .map(|index| if *index == i { position } else { *index })
+                    .collect();
+            }
+        }
+
+        let indices: Vec<usize> = indices
+            .iter()
+            .flat_map(|index| new_indices.iter().position(|comp| comp == index))
+            .collect();
+
+        (new_vertices, indices)
+    }
+
+    fn unique(i: usize, vertex: &Vertex, vertices: &[&Vertex]) -> bool {
+        let position = vertices.iter().position(|comp| {
+            comp.vertex == vertex.vertex
+                && comp.normal == vertex.normal
+                && comp.tangent == vertex.tangent
+                && comp.uv == vertex.uv
+        });
+
+        position.is_none() || position.unwrap() >= i
     }
 
     pub fn build(textures: &TextureInfo, entity: &MapEntity, brush: &Brush) -> BrushGeometry {

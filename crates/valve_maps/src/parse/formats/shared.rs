@@ -1,6 +1,6 @@
-use bevy::prelude::{Color, Vec3};
+use bevy::prelude::Vec3;
 
-use crate::convert::quake_point_to_bevy_point;
+
 
 use super::valve::TextureAlignment;
 
@@ -81,57 +81,10 @@ impl Fields {
     }
 
     pub fn is_sensor(&self) -> bool {
-        if let Some(prop) = self.0.get("classname") {
+        if let Some(prop) = self.get("classname") {
             return prop == "sensor";
         }
         false
-    }
-
-    pub fn get_bool_property(&self, name: &str) -> Option<bool> {
-        if let Some(prop) = self.0.get(name) {
-            return Some(prop == "1");
-        }
-        None
-    }
-
-    pub fn get_f32_property(&self, name: &str) -> Option<f32> {
-        if let Some(prop) = self.0.get(name) {
-            return Some(prop.parse().unwrap_or(0.0));
-        }
-        None
-    }
-
-    pub fn get_vec3_property(&self, name: &str) -> Option<Vec3> {
-        if let Some(prop) = self.0.get(name) {
-            let mut comps = prop.split(' ');
-            let x: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            let y: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            let z: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            return Some(quake_point_to_bevy_point(Vec3::new(x, y, z), 16.0));
-        }
-        None
-    }
-
-    pub fn get_vec3_property_raw(&self, name: &str) -> Option<Vec3> {
-        if let Some(prop) = self.0.get(name) {
-            let mut comps = prop.split(' ');
-            let x: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            let y: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            let z: f32 = comps.next().unwrap_or("0.0").parse().unwrap_or(0.0);
-            return Some(Vec3::new(x, y, z));
-        }
-        None
-    }
-
-    pub fn get_color_property(&self, name: &str) -> Option<Color> {
-        if let Some(prop) = self.0.get(name) {
-            let mut comps = prop.split(' ');
-            let r: u8 = comps.next().unwrap_or("255").parse().unwrap_or(255);
-            let g: u8 = comps.next().unwrap_or("255").parse().unwrap_or(0);
-            let b: u8 = comps.next().unwrap_or("255").parse().unwrap_or(255);
-            return Some(Color::rgb_u8(r, g, b));
-        }
-        None
     }
 }
 
@@ -159,7 +112,8 @@ where
                 maybe_sep_terminated(pair(maybe_sep_terminated(quoted_string), quoted_string)),
                 HashMap::new(),
                 |mut map, (k, v)| {
-                    map.insert(k.into(), v.into());
+                    // filter out internal TrenchBroom data
+                    if !k.starts_with("_tb_") { map.insert(k.into(), v.into()); }
                     map
                 },
             ),

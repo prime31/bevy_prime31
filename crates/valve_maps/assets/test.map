@@ -131,6 +131,19 @@
 }
 // entity 2
 {
+"classname" "light"
+"origin" "-72 -56 -40"
+"color" "155 255 100"
+"intensity" "400"
+}
+// entity 3
+{
+"classname" "spawn_point"
+"origin" "-88 88 136"
+"angle" "270"
+}
+// entity 4
+{
 "classname" "rotate"
 // brush 0
 {
@@ -141,17 +154,4 @@
 ( -64 -16 -48 ) ( -63 -16 -48 ) ( -64 -16 -47 ) checkerboard [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
 ( -64 -16 -48 ) ( -64 -16 -47 ) ( -64 -15 -48 ) checkerboard [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
 }
-}
-// entity 3
-{
-"classname" "light"
-"origin" "-72 -56 -40"
-"color" "155 255 100"
-"intensity" "400"
-}
-// entity 4
-{
-"classname" "spawn_point"
-"origin" "-88 88 136"
-"angle" "270"
 }

@@ -8,7 +8,7 @@ use bevy::{
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 use cameras::flycam::FlycamPlugin;
-use valve_maps::bevy::{ValveMapPlugin, ValveMapBundle};
+use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
 fn main() {
     App::new()
@@ -26,6 +26,7 @@ fn main() {
             color: Color::WHITE,
             brightness: 0.5,
         })
+        .add_system(print_collision_events)
         .run();
 }
 
@@ -55,13 +56,28 @@ fn setup_scene(
             ..Default::default()
         });
 
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 6.5, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    }).insert(valve_maps::bevy::ValveMapPlayer);
+    commands
+        .spawn(Camera3dBundle {
+            transform: Transform::from_xyz(-2.0, 6.5, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..default()
+        })
+        .insert(valve_maps::bevy::ValveMapPlayer);
 
     commands.spawn(ValveMapBundle {
         map: asset_server.load("test.map"),
         ..Default::default()
     });
+}
+
+fn print_collision_events(
+    mut collision_events: EventReader<CollisionEvent>,
+    mut contact_force_events: EventReader<ContactForceEvent>,
+) {
+    for collision_event in collision_events.iter() {
+        println!("Received collision event: {:?}", collision_event);
+    }
+
+    for contact_force_event in contact_force_events.iter() {
+        println!("Received contact force event: {:?}", contact_force_event);
+    }
 }
