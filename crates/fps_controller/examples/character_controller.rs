@@ -8,14 +8,13 @@ use bevy::{
         Transform, Vec3, *,
     },
     render::{camera::Viewport, view::RenderLayers},
-    window::CursorGrabMode,
     DefaultPlugins,
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier3d::prelude::*;
 
-use fps_controller::{FPSControllerPlugin, FpsController, FpsControllerInput, LogicalPlayer, RenderPlayer};
-use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
+use fps_controller::input::{FpsInputPlugin, LogicalPlayer, RenderPlayer};
+use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin, ValveMapPlayer};
 
 fn main() {
     App::new()
@@ -31,9 +30,9 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(FPSControllerPlugin)
+        .add_plugin(FpsInputPlugin)
         .add_startup_system(setup_scene)
-        .add_systems((print_collision_events, display_text, manage_cursor))
+        .add_systems((print_collision_events, display_text))
         .run();
 }
 
@@ -50,7 +49,7 @@ fn setup_scene(
         .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
 
     commands.spawn((
-        (LogicalPlayer, valve_maps::bevy::ValveMapPlayer, RenderLayers::layer(1)),
+        (ValveMapPlayer, LogicalPlayer, RenderLayers::layer(1)),
         PbrBundle {
             mesh: meshes.add(shape::Capsule::default().into()),
             material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
@@ -73,15 +72,6 @@ fn setup_scene(
         AdditionalMassProperties::Mass(1.0),
         GravityScale(0.0),
         Ccd { enabled: true }, // Prevent clipping when going fast
-        FpsControllerInput {
-            pitch: -TAU / 12.0,
-            yaw: TAU * 5.0 / 8.0,
-            ..default()
-        },
-        FpsController {
-            air_acceleration: 20.0,
-            ..default()
-        },
     ));
 
     commands
@@ -98,13 +88,13 @@ fn setup_scene(
             RenderLayers::default().without(1) // all but our LogicalPlayer
         ))
         .with_children(|builder| {
-            // Right Camera
+            // Right Camera for 3rd person view trailing a bit and slightly above the player
             let win_w = 1280;
             let frame_w = 256;
             let frame_h = 256 / (1280 / 720);
             builder.spawn((
                 Camera3dBundle {
-                    transform: Transform::from_xyz(0., 1.5, 15.),
+                    transform: Transform::from_xyz(0., 1.5, 15.0),
                     camera: Camera {
                         order: 1, // after other camera
                         viewport: Some(Viewport {
@@ -161,29 +151,6 @@ fn print_collision_events(
 
     for contact_force_event in contact_force_events.iter() {
         println!("Received contact force event: {:?}", contact_force_event);
-    }
-}
-
-fn manage_cursor(
-    btn: Res<Input<MouseButton>>,
-    key: Res<Input<KeyCode>>,
-    mut window_query: Query<&mut Window>,
-    mut controller_query: Query<&mut FpsController>,
-) {
-    let mut window = window_query.single_mut();
-    if btn.just_pressed(MouseButton::Left) {
-        window.cursor.grab_mode = CursorGrabMode::Locked;
-        window.cursor.visible = false;
-        for mut controller in &mut controller_query {
-            controller.enable_input = true;
-        }
-    }
-    if key.just_pressed(KeyCode::Escape) {
-        window.cursor.grab_mode = CursorGrabMode::None;
-        window.cursor.visible = true;
-        for mut controller in &mut controller_query {
-            controller.enable_input = false;
-        }
     }
 }
 
