@@ -1,6 +1,6 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::{input::mouse::MouseMotion, prelude::*, math::Vec3Swizzles};
+use bevy::{input::mouse::MouseMotion, math::Vec3Swizzles, prelude::*};
 use bevy_rapier3d::prelude::*;
 
 #[derive(Default)]
@@ -103,7 +103,7 @@ impl Default for FpsController {
             uncrouch_speed: 8.0,
             height: 1.0,
             upright_height: 2.0,
-            crouch_height: 1.25,
+            crouch_height: 1.0,
             acceleration: 10.0,
             friction: 10.0,
             traction_normal_cutoff: 0.7,
@@ -125,7 +125,7 @@ impl Default for FpsController {
             key_sprint: KeyCode::LShift,
             key_jump: KeyCode::Space,
             key_fly: KeyCode::F,
-            key_crouch: KeyCode::LControl,
+            key_crouch: KeyCode::C,
             sensitivity: 0.005,
         }
     }
@@ -164,7 +164,7 @@ pub fn controller_input(
             get_axis(&key_input, controller.key_forward, controller.key_back),
         );
         input.sprint = key_input.pressed(controller.key_sprint);
-        input.jump = key_input.pressed(controller.key_jump);
+        input.jump = key_input.just_pressed(controller.key_jump);
         input.fly = key_input.just_pressed(controller.key_fly);
         input.crouch = key_input.pressed(controller.key_crouch);
     }
@@ -314,8 +314,8 @@ pub fn controller_move(
                     controller.height = controller.height.clamp(crouch_height, upright_height);
 
                     if let Some(mut capsule) = collider.as_capsule_mut() {
-                        capsule.set_segment(Vec3::Y * -0.5, Vec3::Y * 0.5);
-                        // capsule.set_segment(Vec3::Y * -0.5, Vec3::Y * controller.height);
+                        // capsule.set_segment(Vec3::Y * -0.5, Vec3::Y * 0.5);
+                        capsule.set_segment(Vec3::Y * -0.5, Vec3::Y * 0.5 * (controller.height - 1.0));
                     }
 
                     // Step offset
@@ -333,72 +333,10 @@ pub fn controller_move(
                             transform.translation += cast_offset;
                         }
                     }
-
-                    // Prevent falling off ledges
-                    if controller.ground_tick >= 1 && input.crouch {
-                        for _ in 0..2 {
-                            // Find the component of our velocity that is overhanging and subtract it off
-                            let overhang = overhang_component(
-                                entity,
-                                transform.as_ref(),
-                                physics_context.as_ref(),
-                                velocity.linvel,
-                                dt,
-                            );
-                            if let Some(overhang) = overhang {
-                                velocity.linvel -= overhang;
-                            }
-                        }
-                        // If we are still overhanging consider unsolvable and freeze
-                        if overhang_component(
-                            entity,
-                            transform.as_ref(),
-                            physics_context.as_ref(),
-                            velocity.linvel,
-                            dt,
-                        )
-                        .is_some()
-                        {
-                            velocity.linvel = Vec3::ZERO;
-                        }
-                    }
                 }
             }
         }
     }
-}
-
-fn overhang_component(
-    entity: Entity,
-    transform: &Transform,
-    physics_context: &RapierContext,
-    velocity: Vec3,
-    dt: f32,
-) -> Option<Vec3> {
-    // Cast a segment (zero radius on capsule) from our next position back towards us
-    // If there is a ledge in front of us we will hit the edge of it
-    // We can use the normal of the hit to subtract off the component that is overhanging
-    let cast_capsule = Collider::capsule(Vec3::Y * 0.125, -Vec3::Y * 0.125, 0.0);
-    let filter = QueryFilter::default().exclude_rigid_body(entity);
-    let future_position = transform.translation + velocity * dt;
-    let cast = physics_context.cast_shape(
-        future_position,
-        transform.rotation,
-        -velocity,
-        &cast_capsule,
-        0.5,
-        filter,
-    );
-    if let Some((_, toi)) = cast {
-        let cast = physics_context.cast_ray(future_position + Vec3::Y * 0.125, -Vec3::Y, 0.375, false, filter);
-        // Make sure that this is actually a ledge, e.g. there is no ground in front of us
-        if cast.is_none() {
-            let normal = -toi.normal1;
-            let alignment = Vec3::dot(velocity, normal);
-            return Some(alignment * normal);
-        }
-    }
-    None
 }
 
 fn acceleration(wish_direction: Vec3, wish_speed: f32, acceleration: f32, velocity: Vec3, dt: f32) -> Vec3 {
