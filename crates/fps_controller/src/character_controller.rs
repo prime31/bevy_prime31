@@ -18,7 +18,7 @@ pub fn update(
     mut query: Query<(&mut KinematicCharacterController, &FpsControllerInput, &Velocity)>,
     render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
-    for (mut controller, input, _) in query.iter_mut() {
+    for (mut controller, input, velocity) in query.iter_mut() {
         for tf in render_query.iter() {
             let tf_yaw = tf.rotation.to_euler(EulerRot::YXZ).0;
             let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, tf_yaw - input.yaw);
@@ -41,15 +41,20 @@ pub fn update(
             let gravity = 20.0;
             let jump_speed = 8.0;
 
-            let max_speed = if input.crouch {
+            let target_speed = if input.crouch {
                 crouched_speed
             } else if input.sprint {
                 run_speed
             } else {
                 walk_speed
             };
-            wish_speed = f32::min(wish_speed, max_speed);
-            wish_speed = f32::min(wish_speed, air_speed_cap);
+            wish_speed = f32::min(wish_speed, target_speed);
+
+            // if in air
+            // wish_speed = f32::min(wish_speed, air_speed_cap);
+
+            let current_h_speed = Vec3::new(velocity.linvel.x, 0.0, velocity.linvel.z).length();
+
             wish_direction.y = gravity * time.delta_seconds();
 
             if input.jump {
