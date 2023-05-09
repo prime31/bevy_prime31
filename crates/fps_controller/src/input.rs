@@ -1,7 +1,8 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
-use bevy_rapier3d::prelude::Collider;
+
+use egui_helper::EguiHelperState;
 
 #[derive(Default)]
 pub struct FpsInputPlugin;
@@ -17,10 +18,10 @@ impl Plugin for FpsInputPlugin {
 }
 
 #[derive(Component)]
-pub struct LogicalPlayer;
+pub struct RenderPlayer;
 
 #[derive(Component)]
-pub struct RenderPlayer;
+pub struct FpsPlayer;
 
 #[derive(Component, Default, Reflect)]
 pub struct FpsControllerInput {
@@ -53,7 +54,7 @@ impl Default for FpsControllerInputConfig {
     fn default() -> Self {
         Self {
             enable_input: true,
-            sensitivity: 0.005,
+            sensitivity: 0.7,
             key_forward: KeyCode::W,
             key_back: KeyCode::S,
             key_left: KeyCode::A,
@@ -70,7 +71,7 @@ impl Default for FpsControllerInputConfig {
 
 const ANGLE_EPSILON: f32 = 0.001953125;
 
-fn setup(mut commands: Commands, q: Query<Entity, With<LogicalPlayer>>) {
+fn setup(mut commands: Commands, q: Query<Entity, With<FpsPlayer>>) {
     for entity in q.iter() {
         commands
             .entity(entity)
@@ -79,10 +80,16 @@ fn setup(mut commands: Commands, q: Query<Entity, With<LogicalPlayer>>) {
 }
 
 fn controller_input(
+    time: Res<Time>,
     key_input: Res<Input<KeyCode>>,
+    egui_state: Res<EguiHelperState>,
     mut mouse_events: EventReader<MouseMotion>,
     mut query: Query<(&FpsControllerInputConfig, &mut FpsControllerInput)>,
 ) {
+    if egui_state.wants_input {
+        return;
+    };
+
     for (controller, mut input) in query.iter_mut() {
         if !controller.enable_input {
             continue;
@@ -91,13 +98,16 @@ fn controller_input(
         let mut mouse_delta: Vec2 = mouse_events
             .iter()
             .fold(Vec2::ZERO, |collector, evt| collector + evt.delta);
-        mouse_delta *= controller.sensitivity;
+        mouse_delta *= controller.sensitivity * time.delta_seconds();
 
-        input.pitch = (input.pitch - mouse_delta.y).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
-        input.yaw -= mouse_delta.x;
-        if input.yaw.abs() > PI {
-            input.yaw = input.yaw.rem_euclid(TAU);
-        }
+        // input.pitch = (input.pitch - mouse_delta.y).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
+        // input.yaw -= mouse_delta.x;
+        // if input.yaw.abs() > PI {
+        //     input.yaw = input.yaw.rem_euclid(TAU);
+        // }
+
+        input.pitch = mouse_delta.y;
+        input.yaw = mouse_delta.x;
 
         input.movement = Vec3::new(
             get_axis(&key_input, controller.key_right, controller.key_left),
@@ -148,18 +158,20 @@ fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode)
 }
 
 pub fn sync_render_player(
-    logical_query: Query<(&Transform, &Collider, &FpsControllerInput), With<LogicalPlayer>>,
-    mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<LogicalPlayer>)>,
+    logical_query: Query<&FpsControllerInput, With<FpsPlayer>>,
+    mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
-    // TODO: inefficient O(N^2) loop, use hash map?
-    for (logical_transform, collider, controller) in logical_query.iter() {
-        if let Some(capsule) = collider.as_capsule() {
-            for mut render_transform in render_query.iter_mut() {
-                // TODO: let this be more configurable
-                let camera_height = capsule.segment().b().y + capsule.radius() * 0.75;
-                render_transform.translation = logical_transform.translation + Vec3::Y * camera_height;
-                render_transform.rotation = Quat::from_euler(EulerRot::YXZ, controller.yaw, controller.pitch, 0.0);
+    for controller in logical_query.iter() {
+        for mut tf in render_query.iter_mut() {
+            let euler = tf.rotation.to_euler(EulerRot::YXZ);
+
+            let mut yaw = euler.0 - controller.yaw;
+            let pitch = (euler.1 - controller.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
+            if yaw.abs() > PI {
+                yaw = yaw.rem_euclid(TAU);
             }
+
+            tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
         }
     }
 }

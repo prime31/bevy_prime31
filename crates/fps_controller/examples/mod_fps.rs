@@ -11,9 +11,10 @@ use bevy::{
     window::CursorGrabMode,
     DefaultPlugins,
 };
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 use bevy_rapier3d::prelude::*;
 
+use egui_helper::EguiHelperPlugin;
 use fps_controller::mod_fps::{FPSControllerPlugin, FpsController, FpsControllerInput, LogicalPlayer, RenderPlayer};
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -28,7 +29,7 @@ fn main() {
             brightness: 0.5,
         })
         .add_plugin(ValveMapPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(EguiHelperPlugin)
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(FPSControllerPlugin)

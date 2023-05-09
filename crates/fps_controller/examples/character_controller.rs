@@ -10,11 +10,12 @@ use bevy::{
     render::{camera::Viewport, view::RenderLayers},
     DefaultPlugins,
 };
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 use bevy_rapier3d::prelude::*;
 
-use fps_controller::input::{FpsInputPlugin, LogicalPlayer, RenderPlayer};
-use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin, ValveMapPlayer};
+use egui_helper::EguiHelperPlugin;
+use fps_controller::{input::{FpsInputPlugin, FpsPlayer, RenderPlayer}, character_controller::CharacterControllerPlugin};
+use valve_maps::bevy::{ValveMapBundle, ValveMapPlayer, ValveMapPlugin};
 
 fn main() {
     App::new()
@@ -26,11 +27,12 @@ fn main() {
             color: Color::WHITE,
             brightness: 0.5,
         })
+        .add_plugin(EguiHelperPlugin)
         .add_plugin(ValveMapPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(FpsInputPlugin)
+        .add_plugin(CharacterControllerPlugin)
         .add_startup_system(setup_scene)
         .add_systems((print_collision_events, display_text))
         .run();
@@ -48,71 +50,75 @@ fn setup_scene(
         .insert(Restitution::coefficient(1.0))
         .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
 
-    commands.spawn((
-        (ValveMapPlayer, LogicalPlayer, RenderLayers::layer(1)),
-        PbrBundle {
-            mesh: meshes.add(shape::Capsule::default().into()),
-            material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
-            ..Default::default()
-        },
-        Collider::capsule(Vec3::Y * -0.5, Vec3::Y * 0.5, 0.5),
-        Friction {
-            coefficient: 0.0,
-            combine_rule: CoefficientCombineRule::Min,
-        },
-        Restitution {
-            coefficient: 0.0,
-            combine_rule: CoefficientCombineRule::Min,
-        },
-        ActiveEvents::COLLISION_EVENTS,
-        Velocity::zero(),
-        RigidBody::Dynamic,
-        Sleeping::disabled(),
-        LockedAxes::ROTATION_LOCKED,
-        AdditionalMassProperties::Mass(1.0),
-        GravityScale(0.0),
-        Ccd { enabled: true }, // Prevent clipping when going fast
-    ));
-
+    // FPS player with a child camera with has another child camera (for 3rd person view)
     commands
         .spawn((
-            RenderPlayer,
-            Camera3dBundle {
-                // transform: Transform::from_xyz(-2.0, 6.5, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
-                projection: Projection::Perspective(PerspectiveProjection {
-                    fov: TAU / 5.0,
-                    ..default()
-                }),
-                ..default()
+            (ValveMapPlayer, FpsPlayer, RenderLayers::layer(1)),
+            PbrBundle {
+                mesh: meshes.add(shape::Capsule::default().into()),
+                material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
+                ..Default::default()
             },
-            RenderLayers::default().without(1) // all but our LogicalPlayer
+            Collider::capsule(Vec3::Y * -0.5, Vec3::Y * 0.5, 0.5),
+            // Friction {
+            //     coefficient: 0.0,
+            //     combine_rule: CoefficientCombineRule::Min,
+            // },
+            // Restitution {
+            //     coefficient: 0.0,
+            //     combine_rule: CoefficientCombineRule::Min,
+            // },
+            ActiveEvents::COLLISION_EVENTS,
+            Velocity::zero(),
+            RigidBody::KinematicPositionBased,
+            KinematicCharacterController::default(),
+            // Sleeping::disabled(),
+            // LockedAxes::ROTATION_LOCKED,
+            // AdditionalMassProperties::Mass(1.0),
+            // GravityScale(0.0),
+            Ccd { enabled: true }, // Prevent clipping when going fast
         ))
         .with_children(|builder| {
-            // Right Camera for 3rd person view trailing a bit and slightly above the player
-            let win_w = 1280;
-            let frame_w = 256;
-            let frame_h = 256 / (1280 / 720);
-            builder.spawn((
-                Camera3dBundle {
-                    transform: Transform::from_xyz(0., 1.5, 15.0),
-                    camera: Camera {
-                        order: 1, // after other camera
-                        viewport: Some(Viewport {
-                            physical_position: UVec2::new(win_w * 2 - frame_w * 2, 0),
-                            physical_size: UVec2::new(frame_w * 2, frame_h * 2),
+            builder
+                .spawn((
+                    RenderPlayer,
+                    Camera3dBundle {
+                        transform: Transform::from_xyz(0.0, 1.0, 0.0),
+                        projection: Projection::Perspective(PerspectiveProjection {
+                            fov: TAU / 5.0,
                             ..default()
                         }),
                         ..default()
                     },
-                    camera_3d: Camera3d {
-                        clear_color: ClearColorConfig::None,
-                        ..default()
-                    },
-                    ..default()
-                },
-                UiCameraConfig { show_ui: false },
-                RenderLayers::default().with(1)
-            ));
+                    RenderLayers::default().without(1), // all but our LogicalPlayer
+                ))
+                .with_children(|builder| {
+                    // Right Camera for 3rd person view trailing a bit and slightly above the player
+                    let win_w = 1280;
+                    let frame_w = 256;
+                    let frame_h = 256 / (1280 / 720);
+                    builder.spawn((
+                        Camera3dBundle {
+                            transform: Transform::from_xyz(0., 1.5, 15.0),
+                            camera: Camera {
+                                order: 1, // after other camera
+                                viewport: Some(Viewport {
+                                    physical_position: UVec2::new(win_w * 2 - frame_w * 2, 0),
+                                    physical_size: UVec2::new(frame_w * 2, frame_h * 2),
+                                    ..default()
+                                }),
+                                ..default()
+                            },
+                            camera_3d: Camera3d {
+                                clear_color: ClearColorConfig::None,
+                                ..default()
+                            },
+                            ..default()
+                        },
+                        UiCameraConfig { show_ui: false },
+                        RenderLayers::default().with(1),
+                    ));
+                });
         });
 
     commands.spawn(
