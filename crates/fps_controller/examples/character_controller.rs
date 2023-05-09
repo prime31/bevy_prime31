@@ -60,22 +60,9 @@ fn setup_scene(
                 ..Default::default()
             },
             Collider::capsule(Vec3::Y * -0.5, Vec3::Y * 0.5, 0.5),
-            // Friction {
-            //     coefficient: 0.0,
-            //     combine_rule: CoefficientCombineRule::Min,
-            // },
-            // Restitution {
-            //     coefficient: 0.0,
-            //     combine_rule: CoefficientCombineRule::Min,
-            // },
             ActiveEvents::COLLISION_EVENTS,
-            Velocity::zero(),
             RigidBody::KinematicPositionBased,
             KinematicCharacterController::default(),
-            // Sleeping::disabled(),
-            // LockedAxes::ROTATION_LOCKED,
-            // AdditionalMassProperties::Mass(1.0),
-            // GravityScale(0.0),
             Ccd { enabled: true }, // Prevent clipping when going fast
         ))
         .with_children(|builder| {

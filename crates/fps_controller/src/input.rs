@@ -13,6 +13,7 @@ impl Plugin for FpsInputPlugin {
             .register_type::<FpsControllerInputConfig>()
             .add_system(setup.on_startup().in_base_set(StartupSet::PostStartup))
             .add_system(controller_input)
+            .add_system(calculate_movement)
             .add_system(sync_render_player);
     }
 }
@@ -98,27 +99,30 @@ fn controller_input(
         let mut mouse_delta: Vec2 = mouse_events
             .iter()
             .fold(Vec2::ZERO, |collector, evt| collector + evt.delta);
-        mouse_delta *= controller.sensitivity * time.delta_seconds();
-
-        // input.pitch = (input.pitch - mouse_delta.y).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
-        // input.yaw -= mouse_delta.x;
-        // if input.yaw.abs() > PI {
-        //     input.yaw = input.yaw.rem_euclid(TAU);
-        // }
+        mouse_delta *= controller.sensitivity * time.delta_seconds(); // is this correct calcuation
 
         input.pitch = mouse_delta.y;
         input.yaw = mouse_delta.x;
+
+        input.sprint = key_input.pressed(controller.key_sprint);
+        input.jump = key_input.just_pressed(controller.key_jump);
+        input.fly = key_input.just_pressed(controller.key_fly);
+        input.crouch = key_input.pressed(controller.key_crouch);
 
         input.movement = Vec3::new(
             get_axis(&key_input, controller.key_right, controller.key_left),
             get_axis(&key_input, controller.key_up, controller.key_down),
             get_axis(&key_input, controller.key_forward, controller.key_back),
         );
-        input.sprint = key_input.pressed(controller.key_sprint);
-        input.jump = key_input.just_pressed(controller.key_jump);
-        input.fly = key_input.just_pressed(controller.key_fly);
-        input.crouch = key_input.pressed(controller.key_crouch);
     }
+}
+
+fn calculate_movement(
+    time: Res<Time>,
+    query: Query<&FpsControllerInput>,
+    render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+) {
+    // TODO: should this handle doing basic integration of input + frictions/accelerations?
 }
 
 #[allow(dead_code)]
@@ -158,9 +162,14 @@ fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode)
 }
 
 pub fn sync_render_player(
+    egui_state: Res<EguiHelperState>,
     logical_query: Query<&FpsControllerInput, With<FpsPlayer>>,
     mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
+    if egui_state.wants_input {
+        return;
+    };
+
     for controller in logical_query.iter() {
         for mut tf in render_query.iter_mut() {
             let euler = tf.rotation.to_euler(EulerRot::YXZ);
