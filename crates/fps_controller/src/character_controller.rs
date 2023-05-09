@@ -1,29 +1,27 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::input::{FpsControllerInput, FpsPlayer, RenderPlayer};
+use crate::input::{FpsControllerInput, FpsControllerStages, FpsPlayer, RenderPlayer};
 
 #[derive(Default)]
 pub struct CharacterControllerPlugin;
 
 impl Plugin for CharacterControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(update).add_system(read_result_system);
+        app.add_system(update.in_set(FpsControllerStages::Logic))
+            .add_system(read_result_system);
     }
 }
 
 pub fn update(
     time: Res<Time>,
-    query: Query<&FpsControllerInput>,
+    mut query: Query<(&mut KinematicCharacterController, &FpsControllerInput, &Velocity)>,
     render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
-    mut controllers: Query<&mut KinematicCharacterController>,
 ) {
-    let input = query.get_single().unwrap();
-
-    for input in query.iter() {
+    for (mut controller, input, _) in query.iter_mut() {
         for tf in render_query.iter() {
-            let euler = tf.rotation.to_euler(EulerRot::YXZ);
-            let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, euler.0 - input.yaw);
+            let tf_yaw = tf.rotation.to_euler(EulerRot::YXZ).0;
+            let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, tf_yaw - input.yaw);
             move_to_world.z_axis *= -1.0; // Forward is -Z
 
             let mut wish_direction = move_to_world * (input.movement * Vec3::new(30.0, 0.0, 30.0));
@@ -32,6 +30,8 @@ pub fn update(
                 // Avoid division by zero
                 wish_direction /= wish_speed; // Effectively normalize, avoid length computation twice
             }
+
+            // wish_direction = wish_direction.clamp_length_max(1.0);
 
             // config these
             let crouched_speed = 5.0;
@@ -56,9 +56,7 @@ pub fn update(
                 wish_direction.y = jump_speed;
             }
 
-            for mut controller in controllers.iter_mut() {
-                controller.translation = Some(-wish_direction * 0.1);
-            }
+            controller.translation = Some(-wish_direction * 0.1);
         }
     }
 }

@@ -60,6 +60,7 @@ fn setup_scene(
                 ..Default::default()
             },
             Collider::capsule(Vec3::Y * -0.5, Vec3::Y * 0.5, 0.5),
+            Velocity::zero(),
             ActiveEvents::COLLISION_EVENTS,
             RigidBody::KinematicPositionBased,
             KinematicCharacterController::default(),

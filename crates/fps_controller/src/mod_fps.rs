@@ -227,9 +227,10 @@ pub fn controller_move(
                         filter,
                     );
 
-                    let speeds = Vec3::new(controller.side_speed, 0.0, controller.forward_speed);
                     let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, input.yaw);
                     move_to_world.z_axis *= -1.0; // Forward is -Z
+
+                    let speeds = Vec3::new(controller.side_speed, 0.0, controller.forward_speed);
                     let mut wish_direction = move_to_world * (input.movement * speeds);
                     let mut wish_speed = wish_direction.length();
                     if wish_speed > f32::EPSILON {
