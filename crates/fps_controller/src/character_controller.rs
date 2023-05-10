@@ -3,6 +3,8 @@ use bevy_rapier3d::prelude::*;
 
 use crate::input::{FpsControllerInput, FpsControllerStages, FpsPlayer, RenderPlayer};
 
+// https://github.com/IsaiahKelly/quake3-movement-for-unity/blob/master/Quake3Movement/Scripts/Q3PlayerController.cs
+
 #[derive(Default)]
 pub struct CharacterControllerPlugin;
 
