@@ -4,7 +4,6 @@ use std::f32::consts::TAU;
 
 use bevy::{prelude::*, render::{view::RenderLayers, camera::Viewport}, core_pipeline::clear_color::ClearColorConfig};
 use bevy_rapier3d::prelude::*;
-use bevy_rapier3d::prelude::*;
 use bevy_tnua::{
     TnuaFreeFallBehavior, TnuaPlatformerAnimatingOutput, TnuaPlatformerBundle, TnuaPlatformerConfig,
     TnuaPlatformerControls, TnuaPlatformerPlugin, TnuaRapier3dPlugin,
