@@ -64,6 +64,7 @@ fn setup_scene(
             ActiveEvents::COLLISION_EVENTS,
             RigidBody::KinematicPositionBased,
             KinematicCharacterController::default(),
+            KinematicCharacterControllerOutput::default(),
             Ccd { enabled: true }, // Prevent clipping when going fast
         ))
         .with_children(|builder| {
