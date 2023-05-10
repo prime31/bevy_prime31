@@ -53,6 +53,9 @@ pub struct FpsControllerInput {
     pub pitch: f32,
     pub yaw: f32,
     pub movement: Vec3,
+    // move these to some state struct
+    pub vel: Vec3,
+    pub grounded: bool,
 }
 
 #[derive(Component, Reflect)]
