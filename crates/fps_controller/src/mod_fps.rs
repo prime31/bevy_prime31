@@ -113,7 +113,7 @@ impl Default for FpsController {
             yaw: 0.0,
             ground_tick: 0,
             stop_speed: 1.0,
-            jump_speed: 8.5,
+            jump_speed: 10.5,
             step_offset: 0.0,
             enable_input: true,
             key_forward: KeyCode::W,

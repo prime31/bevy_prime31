@@ -17,7 +17,13 @@ pub fn update(
     time: Res<Time>,
     mut query: Query<(&mut KinematicCharacterController, &mut FpsControllerInput)>,
     render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+    kcc_output_q: Query<&KinematicCharacterControllerOutput>,
 ) {
+    let mut grounded = false;
+    if let Ok(kcc) = kcc_output_q.get_single() {
+        grounded = kcc.grounded;
+    };
+
     for (mut controller, mut input) in query.iter_mut() {
         for tf in render_query.iter() {
             // friction
@@ -28,7 +34,7 @@ pub fn update(
                 let mut drop = 0.0;
 
                 // only if grounded
-                if input.grounded {
+                if grounded {
                     let ground_deceleration = 10.0;
                     let friction = 6.0;
                     let control = if speed < ground_deceleration { ground_deceleration } else { speed };
@@ -62,7 +68,7 @@ pub fn update(
             let run_speed = 14.0;
             let _air_speed_cap = 2.0;
             let gravity = 20.0;
-            let jump_speed = 8.0;
+            let jump_speed = 10.0;
             let ground_accel = 10.0;
             let _air_accel = 20.0;
 
@@ -76,7 +82,7 @@ pub fn update(
 
             wish_speed *= target_speed;
 
-            if input.grounded {
+            if grounded {
                 let add_speed = acceleration(
                     wish_direction,
                     wish_speed,
@@ -96,6 +102,7 @@ pub fn update(
                 input.vel.y -= gravity * time.delta_seconds();
             }
 
+            controller.filter_flags = QueryFilterFlags::EXCLUDE_SENSORS;
             controller.translation = Some(input.vel * time.delta_seconds());
         }
     }
@@ -112,18 +119,11 @@ fn acceleration(wish_direction: Vec3, wish_speed: f32, acceleration: f32, veloci
     wish_direction * acceleration_speed
 }
 
-fn read_result_system(
-    controllers: Query<(Entity, &KinematicCharacterControllerOutput)>,
-    mut q_input: Query<&mut FpsControllerInput>,
-) {
-    for (entity, output) in controllers.iter() {
-        for mut input in q_input.iter_mut() {
-            input.grounded = output.grounded;
-        }
-
-        // println!(
-        //     "Entity {:?} moved by {:?} and touches the ground: {:?}",
-        //     entity, output.effective_translation, output.grounded
-        // );
-    }
+fn read_result_system(_controllers: Query<(Entity, &KinematicCharacterControllerOutput)>) {
+    // for (entity, output) in _controllers.iter() {
+    //     println!(
+    //         "Entity {:?} moved by {:?} and touches the ground: {:?}",
+    //         entity, output.effective_translation, output.grounded
+    //     );
+    // }
 }

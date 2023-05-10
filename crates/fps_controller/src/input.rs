@@ -55,7 +55,6 @@ pub struct FpsControllerInput {
     pub movement: Vec3,
     // move these to some state struct
     pub vel: Vec3,
-    pub grounded: bool,
 }
 
 #[derive(Component, Reflect)]
@@ -141,9 +140,9 @@ fn controller_input(
 }
 
 fn calculate_movement(
-    time: Res<Time>,
-    query: Query<&FpsControllerInput>,
-    render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+    _time: Res<Time>,
+    _query: Query<&FpsControllerInput>,
+    _render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
     // TODO: should this handle doing basic integration of input + frictions/accelerations?
 }
