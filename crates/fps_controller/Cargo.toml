@@ -13,7 +13,7 @@ bevy = "0.10"
 bevy_rapier3d = "0.21.0"
 valve_maps = { path = "../valve_maps" }
 egui_helper = { path = "../egui_helper" }
-bevy-tnua = "0.2"
+bevy-tnua = { version = "0.2", features = ["rapier_3d"] }
 
 [dev-dependencies]
 cameras = { path = "../cameras" }
