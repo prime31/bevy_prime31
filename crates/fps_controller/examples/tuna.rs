@@ -2,7 +2,12 @@ mod common;
 
 use std::f32::consts::TAU;
 
-use bevy::{prelude::*, render::{view::RenderLayers, camera::Viewport}, core_pipeline::clear_color::ClearColorConfig};
+use bevy::{
+    core_pipeline::clear_color::ClearColorConfig,
+    input::mouse::MouseMotion,
+    prelude::*,
+    render::{camera::Viewport, view::RenderLayers},
+};
 use bevy_rapier3d::prelude::*;
 use bevy_tnua::{
     TnuaFreeFallBehavior, TnuaPlatformerAnimatingOutput, TnuaPlatformerBundle, TnuaPlatformerConfig,
@@ -11,6 +16,7 @@ use bevy_tnua::{
 
 use common::MovingPlatform;
 use egui_helper::EguiHelperPlugin;
+use fps_controller::input::{FpsControllerInput, FpsInputPlugin, FpsPlayer, RenderPlayer};
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlayer, ValveMapPlugin};
 
 fn main() {
@@ -22,6 +28,7 @@ fn main() {
     app.add_plugin(TnuaPlatformerPlugin);
     app.add_plugin(EguiHelperPlugin);
     app.add_plugin(ValveMapPlugin);
+    app.add_plugin(FpsInputPlugin);
     app.add_startup_system(setup_camera);
     app.add_startup_system(setup_level);
     app.add_startup_system(setup_player);
@@ -131,6 +138,7 @@ fn setup_player(
 ) {
     let mut cmd = commands.spawn_empty();
     cmd.insert(ValveMapPlayer);
+    cmd.insert(FpsPlayer);
     cmd.insert(PbrBundle {
         mesh: meshes.add(shape::Capsule::default().into()),
         material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
@@ -164,6 +172,7 @@ fn setup_player(
     cmd.with_children(|builder| {
         builder
             .spawn((
+                RenderPlayer,
                 Camera3dBundle {
                     transform: Transform::from_xyz(0.0, 1.0, 0.0),
                     projection: Projection::Perspective(PerspectiveProjection {
@@ -204,38 +213,27 @@ fn setup_player(
     });
 }
 
-fn apply_controls(keyboard: Res<Input<KeyCode>>, mut query: Query<&mut TnuaPlatformerControls>) {
-    // if egui_context.ctx_mut().wants_keyboard_input() {
-    //     for mut controls in query.iter_mut() {
-    //         *controls = Default::default();
-    //     }
-    //     return;
-    // }
-
+fn apply_controls(
+    keyboard: Res<Input<KeyCode>>,
+    mut query: Query<(&mut TnuaPlatformerControls, &FpsControllerInput)>,
+    render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+) {
     let mut direction = Vec3::ZERO;
 
-    if keyboard.pressed(KeyCode::Up) {
-        direction -= Vec3::Z;
-    }
-    if keyboard.pressed(KeyCode::Down) {
-        direction += Vec3::Z;
-    }
-    if keyboard.pressed(KeyCode::Left) {
-        direction -= Vec3::X;
-    }
-    if keyboard.pressed(KeyCode::Right) {
-        direction += Vec3::X;
-    }
+    for (mut controls, input) in query.iter_mut() {
+        for tf in render_query.iter() {
+            let (tf_yaw, _, _) = tf.rotation.to_euler(EulerRot::YXZ);
+            let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, tf_yaw - input.yaw);
+            move_to_world.z_axis *= -1.0; // Forward is -Z
 
-    direction = direction.clamp_length_max(1.0);
+            direction = (move_to_world * input.movement).normalize_or_zero();
+            println!("{:?} vs {:?}", direction, input.movement);
+        }
 
-    let jump = keyboard.pressed(KeyCode::Space);
-
-    for mut controls in query.iter_mut() {
         *controls = TnuaPlatformerControls {
             desired_velocity: direction,
-            desired_forward: direction.normalize(),
-            jump: jump.then(|| 1.0),
+            desired_forward: Vec3::ZERO,
+            jump: input.jump.then(|| 1.0),
         };
     }
 }
