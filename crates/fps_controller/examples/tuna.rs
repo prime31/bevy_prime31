@@ -227,7 +227,6 @@ fn apply_controls(
             move_to_world.z_axis *= -1.0; // Forward is -Z
 
             direction = (move_to_world * input.movement).normalize_or_zero();
-            println!("{:?} vs {:?}", direction, input.movement);
         }
 
         *controls = TnuaPlatformerControls {
@@ -236,4 +235,15 @@ fn apply_controls(
             jump: input.jump.then(|| 1.0),
         };
     }
+}
+
+
+fn get_x_axis(quat: &Quat) -> Quat {
+    let a = (quat.w * quat.w + quat.x * quat.x).sqrt();
+    Quat::from_xyzw(quat.x, 0.0, 0.0, quat.w / a)
+}
+
+fn get_y_axis(quat: &Quat) -> Quat {
+    let a = (quat.w * quat.w + quat.y * quat.y).sqrt();
+    Quat::from_xyzw(0.0, quat.y, 0.0, quat.w / a)
 }
