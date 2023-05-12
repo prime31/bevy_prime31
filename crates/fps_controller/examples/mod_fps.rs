@@ -96,7 +96,7 @@ fn setup_scene(
                 }),
                 ..default()
             },
-            RenderLayers::default().without(1) // all but our LogicalPlayer
+            RenderLayers::default().without(1), // all but our LogicalPlayer
         ))
         .with_children(|builder| {
             // Right Camera
@@ -122,7 +122,7 @@ fn setup_scene(
                     ..default()
                 },
                 UiCameraConfig { show_ui: false },
-                RenderLayers::default().with(1)
+                RenderLayers::default().with(1),
             ));
         });
 

@@ -19,20 +19,15 @@ impl MovingPlatform {
     pub fn make_system<V: Component>(
         mut updater: impl 'static + Send + Sync + FnMut(&mut V, Vec3),
     ) -> bevy::app::SystemAppConfig {
-        (move |time: Res<Time>,
-               mut query: Query<(&mut MovingPlatform, &GlobalTransform, &mut V)>| {
+        (move |time: Res<Time>, mut query: Query<(&mut MovingPlatform, &GlobalTransform, &mut V)>| {
             for (mut moving_platform, transform, mut velocity) in query.iter_mut() {
                 let current = transform.translation();
                 let target = moving_platform.locations[moving_platform.current_leg];
                 let vec_to = target - current;
-                updater(
-                    velocity.as_mut(),
-                    vec_to.normalize_or_zero() * moving_platform.speed,
-                );
+                updater(velocity.as_mut(), vec_to.normalize_or_zero() * moving_platform.speed);
                 //info!("At {:?}, going to {:?}", current, target);
                 if vec_to.length() <= time.delta_seconds() * moving_platform.speed {
-                    moving_platform.current_leg =
-                        (moving_platform.current_leg + 1) % moving_platform.locations.len();
+                    moving_platform.current_leg = (moving_platform.current_leg + 1) % moving_platform.locations.len();
                 }
             }
         })

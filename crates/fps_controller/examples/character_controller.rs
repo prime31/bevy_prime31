@@ -14,7 +14,10 @@ use bevy::{
 use bevy_rapier3d::prelude::*;
 
 use egui_helper::EguiHelperPlugin;
-use fps_controller::{input::{FpsInputPlugin, FpsPlayer, RenderPlayer}, character_controller::CharacterControllerPlugin};
+use fps_controller::{
+    character_controller::CharacterControllerPlugin,
+    input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
+};
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlayer, ValveMapPlugin};
 
 fn main() {

@@ -1,100 +1,13 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
-
 use egui_helper::EguiHelperState;
 
-#[derive(SystemSet, Clone, PartialEq, Eq, Debug, Hash)]
-pub struct FpsControllerSystemSet;
-
-#[derive(SystemSet, Clone, PartialEq, Eq, Debug, Hash)]
-pub enum FpsControllerStages {
-    Input,
-    Logic,
-    RenderSync,
-}
-
-#[derive(Default)]
-pub struct FpsInputPlugin;
-
-impl Plugin for FpsInputPlugin {
-    fn build(&self, app: &mut App) {
-        app.configure_sets(
-            (
-                FpsControllerStages::Input,
-                FpsControllerStages::Logic,
-                FpsControllerStages::RenderSync,
-            )
-                .chain()
-                .in_set(FpsControllerSystemSet),
-        );
-
-        app.register_type::<FpsControllerInput>()
-            .register_type::<FpsControllerInputConfig>()
-            .add_system(setup.on_startup().in_base_set(StartupSet::PostStartup))
-            .add_system(controller_input.in_set(FpsControllerStages::Input))
-            .add_system(calculate_movement)
-            .add_system(sync_render_player.in_set(FpsControllerStages::RenderSync));
-    }
-}
-
-#[derive(Component)]
-pub struct RenderPlayer;
-
-#[derive(Component)]
-pub struct FpsPlayer;
-
-#[derive(Component, Default, Reflect)]
-pub struct FpsControllerInput {
-    pub fly: bool,
-    pub sprint: bool,
-    pub jump: bool,
-    pub crouch: bool,
-    pub pitch: f32,
-    pub yaw: f32,
-    pub movement: Vec3,
-    // move these to some state struct
-    pub vel: Vec3,
-}
-
-#[derive(Component, Reflect)]
-pub struct FpsControllerInputConfig {
-    pub enable_input: bool,
-    pub sensitivity: f32,
-    pub key_forward: KeyCode,
-    pub key_back: KeyCode,
-    pub key_left: KeyCode,
-    pub key_right: KeyCode,
-    pub key_up: KeyCode,
-    pub key_down: KeyCode,
-    pub key_sprint: KeyCode,
-    pub key_jump: KeyCode,
-    pub key_fly: KeyCode,
-    pub key_crouch: KeyCode,
-}
-
-impl Default for FpsControllerInputConfig {
-    fn default() -> Self {
-        Self {
-            enable_input: true,
-            sensitivity: 0.7,
-            key_forward: KeyCode::W,
-            key_back: KeyCode::S,
-            key_left: KeyCode::A,
-            key_right: KeyCode::D,
-            key_up: KeyCode::E,
-            key_down: KeyCode::Q,
-            key_sprint: KeyCode::LShift,
-            key_jump: KeyCode::Space,
-            key_fly: KeyCode::F,
-            key_crouch: KeyCode::C,
-        }
-    }
-}
+use super::components::*;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
 
-fn setup(mut commands: Commands, q: Query<Entity, With<FpsPlayer>>) {
+pub(crate) fn setup(mut commands: Commands, q: Query<Entity, With<FpsPlayer>>) {
     for entity in q.iter() {
         commands
             .entity(entity)
@@ -102,7 +15,7 @@ fn setup(mut commands: Commands, q: Query<Entity, With<FpsPlayer>>) {
     }
 }
 
-fn controller_input(
+pub(crate) fn controller_input(
     time: Res<Time>,
     key_input: Res<Input<KeyCode>>,
     egui_state: Res<EguiHelperState>,
@@ -145,7 +58,7 @@ fn controller_input(
     }
 }
 
-fn calculate_movement(
+pub(crate) fn calculate_movement(
     _time: Res<Time>,
     _query: Query<&FpsControllerInput>,
     _render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
@@ -154,7 +67,7 @@ fn calculate_movement(
 }
 
 #[allow(dead_code)]
-fn manage_cursor(
+pub(crate) fn manage_cursor(
     btn: Res<Input<MouseButton>>,
     key: Res<Input<KeyCode>>,
     mut window_query: Query<&mut Window>,
@@ -177,26 +90,29 @@ fn manage_cursor(
     }
 }
 
-pub fn sync_render_player(
+/// syncs the yaw to the
+pub(crate) fn sync_render_player(
     egui_state: Res<EguiHelperState>,
-    logical_query: Query<&FpsControllerInput, With<FpsPlayer>>,
+    mut logical_query: Query<(&mut Transform, &FpsControllerInput), With<FpsPlayer>>,
     mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
     if egui_state.wants_input {
         return;
     };
 
-    for controller in logical_query.iter() {
-        for mut tf in render_query.iter_mut() {
-            let euler = tf.rotation.to_euler(EulerRot::YXZ);
+    for (mut logical_tf, controller) in logical_query.iter_mut() {
+        for mut render_tf in render_query.iter_mut() {
+            let (_, render_pitch, _) = render_tf.rotation.to_euler(EulerRot::YXZ);
+            let (logical_yaw, _, _) = logical_tf.rotation.to_euler(EulerRot::YXZ);
 
-            let mut yaw = euler.0 - controller.yaw;
-            let pitch = (euler.1 - controller.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
+            let mut yaw = logical_yaw - controller.yaw;
+            let pitch = (render_pitch - controller.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
             if yaw.abs() > PI {
                 yaw = yaw.rem_euclid(TAU);
             }
 
-            tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+            logical_tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
+            render_tf.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, pitch, 0.0);
         }
     }
 }

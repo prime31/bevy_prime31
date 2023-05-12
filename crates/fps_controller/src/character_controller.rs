@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use crate::input::{FpsControllerInput, FpsControllerStages, FpsPlayer, RenderPlayer};
+use crate::input::{FpsControllerInput, FpsControllerStages, FpsPlayer};
 
 // https://github.com/IsaiahKelly/quake3-movement-for-unity/blob/master/Quake3Movement/Scripts/Q3PlayerController.cs
 
@@ -17,93 +17,85 @@ impl Plugin for CharacterControllerPlugin {
 
 pub fn update(
     time: Res<Time>,
-    mut query: Query<(&mut KinematicCharacterController, &KinematicCharacterControllerOutput, &mut FpsControllerInput), With<FpsPlayer>>,
-    render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+    mut query: Query<
+        (
+            &Transform,
+            &mut KinematicCharacterController,
+            &KinematicCharacterControllerOutput,
+            &mut FpsControllerInput,
+        ),
+        With<FpsPlayer>,
+    >,
 ) {
-    for (mut controller, controller_out, mut input) in query.iter_mut() {
-        for tf in render_query.iter() {
-            // friction
-            {
-                let mut vel = input.vel;
-                vel.y = 0.0;
-                let speed = vel.length();
-                let mut drop = 0.0;
+    for (tf, mut controller, controller_out, mut input) in query.iter_mut() {
+        // friction
+        {
+            let mut vel = input.vel;
+            vel.y = 0.0;
+            let speed = vel.length();
+            let mut drop = 0.0;
 
-                // only if grounded
-                if controller_out.grounded {
-                    let ground_deceleration = 10.0;
-                    let friction = 6.0;
-                    let control = if speed < ground_deceleration { ground_deceleration } else { speed };
-                    drop = control * friction * time.delta_seconds();
-                }
-
-                let mut new_speed = speed - drop;
-                if new_speed < 0.0 {
-                    new_speed = 0.0;
-                }
-
-                if speed > 0.0 {
-                    new_speed /= speed;
-                };
-                input.vel.x *= new_speed;
-                input.vel.z *= new_speed;
-            }
-
-            let (tf_yaw, _, _) = tf.rotation.to_euler(EulerRot::YXZ);
-            let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, tf_yaw - input.yaw);
-            move_to_world.z_axis *= -1.0; // Forward is -Z
-
-            let mut wish_direction = (move_to_world * input.movement).normalize_or_zero();
-            wish_direction.y = 0.0;
-            let mut wish_speed = wish_direction.length();
-
-            // config these
-            let walk_speed = 9.0;
-            let run_speed = 14.0;
-            let gravity = 20.0;
-            let jump_speed = 10.0;
-            let ground_accel = 10.0;
-            let air_accel = 7.0;
-
-            let target_speed = if input.sprint {
-                run_speed
-            } else {
-                walk_speed
-            };
-
-            wish_speed *= target_speed;
-
+            // only if grounded
             if controller_out.grounded {
-                let add_speed = acceleration(
-                    wish_direction,
-                    wish_speed,
-                    ground_accel,
-                    input.vel,
-                    time.delta_seconds(),
-                );
-                input.vel += add_speed;
-
-                // reset gravity rather than accrue it
-                input.vel.y = -gravity * time.delta_seconds();
-
-                if input.jump {
-                    input.vel.y = jump_speed;
-                }
-            } else {
-                let mut add_speed = acceleration(
-                    wish_direction,
-                    wish_speed,
-                    air_accel,
-                    input.vel,
-                    time.delta_seconds(),
-                );
-                add_speed.y = -gravity * time.delta_seconds();
-                input.vel += add_speed;
+                let ground_deceleration = 10.0;
+                let friction = 6.0;
+                let control = if speed < ground_deceleration { ground_deceleration } else { speed };
+                drop = control * friction * time.delta_seconds();
             }
 
-            controller.filter_flags = QueryFilterFlags::EXCLUDE_SENSORS;
-            controller.translation = Some(input.vel * time.delta_seconds());
+            let mut new_speed = speed - drop;
+            if new_speed < 0.0 {
+                new_speed = 0.0;
+            }
+
+            if speed > 0.0 {
+                new_speed /= speed;
+            };
+            input.vel.x *= new_speed;
+            input.vel.z *= new_speed;
         }
+
+        let mut wish_direction = tf.forward() * input.movement.z + tf.right() * input.movement.x;
+
+        wish_direction.y = 0.0;
+        let mut wish_speed = wish_direction.length();
+
+        // config these
+        let walk_speed = 9.0;
+        let run_speed = 14.0;
+        let gravity = 20.0;
+        let jump_speed = 10.0;
+        let ground_accel = 10.0;
+        let air_accel = 7.0;
+
+        let target_speed = if input.sprint { run_speed } else { walk_speed };
+
+        wish_speed *= target_speed;
+
+        if controller_out.grounded {
+            let add_speed = acceleration(
+                wish_direction,
+                wish_speed,
+                ground_accel,
+                input.vel,
+                time.delta_seconds(),
+            );
+            input.vel += add_speed;
+
+            // reset gravity rather than accrue it
+            input.vel.y = -gravity * time.delta_seconds();
+
+            if input.jump {
+                input.vel.y = jump_speed;
+            }
+        } else {
+            let mut add_speed = acceleration(wish_direction, wish_speed, air_accel, input.vel, time.delta_seconds());
+            add_speed.y = -gravity * time.delta_seconds();
+            input.vel += add_speed;
+        }
+
+        controller.filter_flags = QueryFilterFlags::EXCLUDE_SENSORS;
+        controller.translation = Some(input.vel * time.delta_seconds());
     }
 }
 

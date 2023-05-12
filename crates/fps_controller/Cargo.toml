@@ -1,12 +1,9 @@
 [package]
 name = "fps_controller"
 version = "0.0.1"
-edition = "2018"
+edition = "2021"
 description = ""
 readme = "README.md"
-
-[workspace]
-resolver = "2"
 
 [dependencies]
 bevy = "0.10"
@@ -15,6 +12,7 @@ valve_maps = { path = "../valve_maps" }
 egui_helper = { path = "../egui_helper" }
 bevy-tnua = { version = "0.2", features = ["rapier_3d"] }
 bevy_prototype_debug_lines = { version = "0.10", features = ["3d"] }
+bevy_polyline = "0.6"
 
 [dev-dependencies]
 cameras = { path = "../cameras" }
