@@ -48,6 +48,16 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
 ) {
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            color: Color::rgb(0.98, 0.95, 0.82),
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::new(-0.15, -0.05, 0.25), Vec3::Y),
+        ..default()
+    });
+
     commands
         .spawn(Collider::cuboid(40.0, 0.1, 40.0))
         .insert(Restitution::coefficient(1.0))
