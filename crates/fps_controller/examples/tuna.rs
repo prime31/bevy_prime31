@@ -7,7 +7,7 @@ use bevy::{
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
-use bevy_prototype_debug_lines::DebugLinesPlugin;
+
 use bevy_rapier3d::prelude::*;
 use bevy_tnua::{
     TnuaFreeFallBehavior, TnuaPlatformerAnimatingOutput, TnuaPlatformerBundle, TnuaPlatformerConfig,
@@ -29,7 +29,6 @@ fn main() {
     app.add_plugin(EguiHelperPlugin);
     app.add_plugin(ValveMapPlugin);
     app.add_plugin(FpsInputPlugin);
-    app.add_plugin(DebugLinesPlugin::with_depth_test(true));
     app.add_startup_system(setup_camera);
     app.add_startup_system(setup_level);
     app.add_startup_system(setup_player);
@@ -209,20 +208,9 @@ fn setup_player(
     });
 }
 
-fn apply_controls(
-    mut query: Query<(&mut TnuaPlatformerControls, &FpsControllerInput)>,
-    render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
-) {
-    let mut direction = Vec3::ZERO;
-
-    for (mut controls, input) in query.iter_mut() {
-        for tf in render_query.iter() {
-            let (tf_yaw, _, _) = tf.rotation.to_euler(EulerRot::YXZ);
-            let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, tf_yaw - input.yaw);
-            move_to_world.z_axis *= -1.0; // Forward is -Z
-
-            direction = (move_to_world * input.movement).normalize_or_zero();
-        }
+fn apply_controls(mut query: Query<(&Transform, &mut TnuaPlatformerControls, &FpsControllerInput)>) {
+    for (tf, mut controls, input) in query.iter_mut() {
+        let direction = tf.forward() * input.movement.z + tf.right() * input.movement.x;
 
         *controls = TnuaPlatformerControls {
             desired_velocity: direction,

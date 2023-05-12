@@ -1,17 +1,65 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
+use bevy_polyline::prelude::{Polyline, PolylineBundle, PolylineMaterial};
 use egui_helper::EguiHelperState;
 
 use super::components::*;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
 
-pub(crate) fn setup(mut commands: Commands, q: Query<Entity, With<FpsPlayer>>) {
+pub(crate) fn setup(
+    mut commands: Commands,
+    q: Query<Entity, With<FpsPlayer>>,
+    mut polyline_materials: ResMut<Assets<PolylineMaterial>>,
+    mut polylines: ResMut<Assets<Polyline>>,
+) {
     for entity in q.iter() {
         commands
             .entity(entity)
             .insert((FpsControllerInput::default(), FpsControllerInputConfig::default()));
+
+        commands.entity(entity).with_children(|builder| {
+            builder.spawn(PolylineBundle {
+                polyline: polylines.add(Polyline {
+                    vertices: crate::get_circle_xz_pts(Vec3::new(0.0, -1., 0.0), 3.0, 4),
+                }),
+                material: polyline_materials.add(PolylineMaterial {
+                    width: 12.0,
+                    color: Color::YELLOW_GREEN,
+                    perspective: true,
+                    depth_bias: -0.0002,
+                }),
+                ..Default::default()
+            });
+
+            // velocity and wish direction
+            builder.spawn(PolylineBundle {
+                polyline: polylines.add(Polyline {
+                    vertices: vec![Vec3::new(0.0, -1.0, 0.0), Vec3::new(0.0, -1.0, -6.0)],
+                }),
+                material: polyline_materials.add(PolylineMaterial {
+                    width: 25.0,
+                    color: Color::INDIGO,
+                    perspective: true,
+                    depth_bias: -0.0002,
+                }),
+                ..Default::default()
+            });
+
+            builder.spawn(PolylineBundle {
+                polyline: polylines.add(Polyline {
+                    vertices: vec![Vec3::new(0.0, -1.0, 0.0), Vec3::new(1.0, -1.0, -6.0)],
+                }),
+                material: polyline_materials.add(PolylineMaterial {
+                    width: 25.0,
+                    color: Color::ORANGE_RED,
+                    perspective: true,
+                    depth_bias: -0.0002,
+                }),
+                ..Default::default()
+            });
+        });
     }
 }
 
@@ -90,8 +138,8 @@ pub(crate) fn manage_cursor(
     }
 }
 
-/// syncs the yaw to the
-pub(crate) fn sync_render_player(
+/// syncs the yaw to the FpsPlayer and the pitch to the RenderPlayer
+pub(crate) fn sync_rotation_input(
     egui_state: Res<EguiHelperState>,
     mut logical_query: Query<(&mut Transform, &FpsControllerInput), With<FpsPlayer>>,
     mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,

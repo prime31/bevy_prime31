@@ -20,3 +20,23 @@ pub fn draw_circle_xz(lines: &mut DebugLines) {
         last = at;
     }
 }
+
+pub fn get_circle_xz_pts(pos: Vec3, radius: f32, resolution: u32) -> Vec<Vec3> {
+    let mut pts = Vec::new();
+
+    let angle_to_vec: fn(f32, f32) -> Vec3 =
+        |angle_rads, len| Vec3::new(f32::cos(angle_rads) * len, 0.0, f32::sin(angle_rads) * len);
+
+    let resolution = resolution as f32;
+    let mut last = Vec3::X * radius;
+
+    for i in 1..resolution as u32 * 4 + 2 {
+        let at = angle_to_vec(i as f32 * FRAC_PI_2 / resolution, radius);
+        pts.push(pos + last);
+        pts.push(pos + at);
+        // lines.line(pos + last, pos + at, 10.0);
+        last = at;
+    }
+
+    pts
+}

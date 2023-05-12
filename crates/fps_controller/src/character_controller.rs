@@ -55,9 +55,7 @@ pub fn update(
             input.vel.z *= new_speed;
         }
 
-        let mut wish_direction = tf.forward() * input.movement.z + tf.right() * input.movement.x;
-
-        wish_direction.y = 0.0;
+        let wish_direction = tf.forward() * input.movement.z + tf.right() * input.movement.x;
         let mut wish_speed = wish_direction.length();
 
         // config these
