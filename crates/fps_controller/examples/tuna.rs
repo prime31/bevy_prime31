@@ -1,13 +1,13 @@
 mod common;
 
-use std::f32::consts::TAU;
+use std::f32::consts::{FRAC_PI_2, TAU};
 
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
-    input::mouse::MouseMotion,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
+use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 use bevy_rapier3d::prelude::*;
 use bevy_tnua::{
     TnuaFreeFallBehavior, TnuaPlatformerAnimatingOutput, TnuaPlatformerBundle, TnuaPlatformerConfig,
@@ -17,6 +17,7 @@ use bevy_tnua::{
 use common::MovingPlatform;
 use egui_helper::EguiHelperPlugin;
 use fps_controller::input::{FpsControllerInput, FpsInputPlugin, FpsPlayer, RenderPlayer};
+use fps_controller::*;
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlayer, ValveMapPlugin};
 
 fn main() {
@@ -29,6 +30,7 @@ fn main() {
     app.add_plugin(EguiHelperPlugin);
     app.add_plugin(ValveMapPlugin);
     app.add_plugin(FpsInputPlugin);
+    app.add_plugin(DebugLinesPlugin::with_depth_test(true));
     app.add_startup_system(setup_camera);
     app.add_startup_system(setup_level);
     app.add_startup_system(setup_player);
@@ -40,11 +42,6 @@ fn main() {
 }
 
 fn setup_camera(mut commands: Commands) {
-    // commands.spawn(Camera3dBundle {
-    //     transform: Transform::from_xyz(0.0, 16.0, 40.0).looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::Y),
-    //     ..Default::default()
-    // });
-
     commands.spawn(PointLightBundle {
         transform: Transform::from_xyz(5.0, 5.0, 5.0),
         ..default()
@@ -214,7 +211,6 @@ fn setup_player(
 }
 
 fn apply_controls(
-    keyboard: Res<Input<KeyCode>>,
     mut query: Query<(&mut TnuaPlatformerControls, &FpsControllerInput)>,
     render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
@@ -237,12 +233,13 @@ fn apply_controls(
     }
 }
 
-
+#[allow(dead_code)]
 fn get_x_axis(quat: &Quat) -> Quat {
     let a = (quat.w * quat.w + quat.x * quat.x).sqrt();
     Quat::from_xyzw(quat.x, 0.0, 0.0, quat.w / a)
 }
 
+#[allow(dead_code)]
 fn get_y_axis(quat: &Quat) -> Quat {
     let a = (quat.w * quat.w + quat.y * quat.y).sqrt();
     Quat::from_xyzw(0.0, quat.y, 0.0, quat.w / a)

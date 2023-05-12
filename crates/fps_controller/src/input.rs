@@ -131,11 +131,17 @@ fn controller_input(
         input.fly = key_input.just_pressed(controller.key_fly);
         input.crouch = key_input.pressed(controller.key_crouch);
 
+        fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode) -> f32 {
+            let get_pressed = |b| if b { 1.0 } else { 0.0 };
+            get_pressed(key_input.pressed(key_pos)) - get_pressed(key_input.pressed(key_neg))
+        }
+
         input.movement = Vec3::new(
             get_axis(&key_input, controller.key_right, controller.key_left),
-            get_axis(&key_input, controller.key_up, controller.key_down),
+            0.0,
             get_axis(&key_input, controller.key_forward, controller.key_back),
-        ).normalize_or_zero();
+        )
+        .normalize_or_zero();
     }
 }
 
@@ -169,18 +175,6 @@ fn manage_cursor(
             controller.enable_input = false;
         }
     }
-}
-
-fn get_pressed(key_input: &Res<Input<KeyCode>>, key: KeyCode) -> f32 {
-    if key_input.pressed(key) {
-        1.0
-    } else {
-        0.0
-    }
-}
-
-fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode) -> f32 {
-    get_pressed(key_input, key_pos) - get_pressed(key_input, key_neg)
 }
 
 pub fn sync_render_player(
