@@ -1,13 +1,13 @@
 mod common;
 
-use std::f32::consts::{FRAC_PI_2, TAU};
+use std::f32::consts::{TAU};
 
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{camera::Viewport, view::RenderLayers},
 };
-use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
+use bevy_prototype_debug_lines::{DebugLinesPlugin};
 use bevy_rapier3d::prelude::*;
 use bevy_tnua::{
     TnuaFreeFallBehavior, TnuaPlatformerAnimatingOutput, TnuaPlatformerBundle, TnuaPlatformerConfig,
@@ -17,7 +17,6 @@ use bevy_tnua::{
 use common::MovingPlatform;
 use egui_helper::EguiHelperPlugin;
 use fps_controller::input::{FpsControllerInput, FpsInputPlugin, FpsPlayer, RenderPlayer};
-use fps_controller::*;
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlayer, ValveMapPlugin};
 
 fn main() {
