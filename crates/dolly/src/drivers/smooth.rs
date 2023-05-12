@@ -96,9 +96,6 @@ impl RigDriver for Smooth {
             },
         );
 
-        CameraTransform {
-            position,
-            rotation,
-        }
+        CameraTransform { position, rotation }
     }
 }

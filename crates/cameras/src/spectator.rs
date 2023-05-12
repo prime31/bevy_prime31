@@ -158,11 +158,7 @@ fn spectator_update(
             let up = if keys.pressed(KeyCode::E) { 1f32 } else { 0f32 };
             let down = if keys.pressed(KeyCode::Q) { 1f32 } else { 0f32 };
 
-            let speed = if keys.pressed(KeyCode::LShift) {
-                settings.alt_speed
-            } else {
-                settings.base_speed
-            };
+            let speed = if keys.pressed(KeyCode::LShift) { settings.alt_speed } else { settings.base_speed };
 
             let delta_axial = (forward - backward) * speed;
             let delta_lateral = (right - left) * speed;
@@ -174,8 +170,7 @@ fn spectator_update(
             right.y = 0f32; // more of a sanity check
             let up = Vec3::Y;
 
-            camera_transform.translation +=
-                forward * delta_axial + right * delta_lateral + up * delta_vertical;
+            camera_transform.translation += forward * delta_axial + right * delta_lateral + up * delta_vertical;
         }
     }
 

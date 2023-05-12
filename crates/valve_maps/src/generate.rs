@@ -111,10 +111,7 @@ impl Geometry {
         textures.push(None);
 
         // Build mesh surfaces for this texture
-        let mesh_surfaces: Vec<MeshSurface> = textures
-            .into_iter()
-            .flat_map(self.build_mesh_surface())
-            .collect();
+        let mesh_surfaces: Vec<MeshSurface> = textures.into_iter().flat_map(self.build_mesh_surface()).collect();
 
         // Return mesh-type visual geometry
         mesh_surfaces
@@ -204,7 +201,10 @@ impl ConvexCollision {
 pub mod brush {
     use crate::formats::shared::{Brush, MapEntity};
 
-    use super::{brush_plane::{self, PlaneGeometry}, TextureInfo, Vertex};
+    use super::{
+        brush_plane::{self, PlaneGeometry},
+        TextureInfo, Vertex,
+    };
 
     #[derive(Debug, Clone)]
     pub struct BrushGeometry {

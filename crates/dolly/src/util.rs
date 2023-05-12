@@ -35,8 +35,7 @@ impl<T: Interpolate + Copy + std::fmt::Debug> ExpSmoothed<T> {
         const SMOOTHNESS_MULT: f32 = 8.0;
 
         // Calculate the exponential blending based on frame time
-        let interp_t = 1.0
-            - (-SMOOTHNESS_MULT * params.delta_time_seconds / params.smoothness.max(1e-5)).exp();
+        let interp_t = 1.0 - (-SMOOTHNESS_MULT * params.delta_time_seconds / params.smoothness.max(1e-5)).exp();
 
         let prev = self.0.unwrap_or(*other);
         let smooth = prev.interpolate(*other, interp_t);
@@ -58,11 +57,7 @@ pub fn look_at(forward: Vec3) -> Quat {
         .and_then(|forward| {
             let right = forward.cross(Vec3::Y).try_normalize()?;
             let up = right.cross(forward);
-            Some(Quat::from_mat3(&Mat3::from_cols(
-                right,
-                up,
-                forward * -1.0,
-            )))
+            Some(Quat::from_mat3(&Mat3::from_cols(right, up, forward * -1.0)))
         })
         .unwrap_or_default()
 }

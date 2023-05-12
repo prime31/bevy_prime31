@@ -1,23 +1,12 @@
-use {
-    ::nom::{
-        IResult,
-        error::{ErrorKind, ParseError}
-    },
+use ::nom::{
+    error::{ErrorKind, ParseError},
+    IResult,
 };
 
 pub(crate) mod nom {
     pub use nom::{
-        *,
-        error,
-        multi,
-        branch,
-        methods,
-        sequence,
-        combinator,
-        bits::complete as bits,
-        bytes::complete as bytes,
-        number::complete as number,
-        character::complete as character,
+        bits::complete as bits, branch, bytes::complete as bytes, character::complete as character, combinator, error,
+        methods, multi, number::complete as number, sequence, *,
     };
 }
 
@@ -32,24 +21,20 @@ pub type Input<'i> = &'i str;
 pub struct Error<'i> {
     pub input: Input<'i>,
     pub kind: ErrorKind,
-    pub context: &'static str
+    pub context: &'static str,
 }
 
-impl <'i> ParseError<Input<'i>> for Error<'i> {
+impl<'i> ParseError<Input<'i>> for Error<'i> {
     fn from_error_kind(input: Input<'i>, kind: ErrorKind) -> Self {
         Error {
             input,
             kind,
-            context: ""
+            context: "",
         }
     }
 
     fn append(input: Input<'i>, kind: ErrorKind, other: Self) -> Self {
-        Error {
-            input,
-            kind,
-            ..other
-        }
+        Error { input, kind, ..other }
     }
 
     fn add_context(input: Input<'i>, context: &'static str, other: Self) -> Self {
@@ -68,7 +53,7 @@ pub type ParseResult<'i, T, E = Error<'i>> = IResult<Input<'i>, T, E>;
 pub trait Parse<'i, E = Error<'i>>
 where
     E: ParseError<Input<'i>>,
-    Self: Sized
+    Self: Sized,
 {
     fn parse(input: Input<'i>) -> ParseResult<Self, E>;
 }

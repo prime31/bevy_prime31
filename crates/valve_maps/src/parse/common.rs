@@ -1,11 +1,9 @@
-use {
-    super::{
-        core::{
-            nom::{combinator::iterator, error::ErrorKind},
-            Input, Parse, ParseResult,
-        },
-        nom::{self, error::ParseError, IResult},
+use super::{
+    core::{
+        nom::{combinator::iterator, error::ErrorKind},
+        Input, Parse, ParseResult,
     },
+    nom::{self, error::ParseError, IResult},
 };
 
 pub use nom_fields::fields;
@@ -23,11 +21,9 @@ where
     E: ParseError<I> + Clone,
     I: Clone,
     F: Fn(I) -> IResult<I, O, E>,
-    O: std::fmt::Debug + Copy
+    O: std::fmt::Debug + Copy,
 {
     move |input| {
-        use std::convert::TryInto;
-
         let mut iter = iterator(input.clone(), &parser);
 
         let vec = iter.collect::<Vec<_>>();

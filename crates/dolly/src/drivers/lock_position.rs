@@ -1,6 +1,4 @@
-use crate::{
-    driver::RigDriver, rig::RigUpdateParams, transform::CameraTransform,
-};
+use crate::{driver::RigDriver, rig::RigUpdateParams, transform::CameraTransform};
 
 /// Locks/constrains the position of the camera to one or more axes
 #[derive(Debug)]

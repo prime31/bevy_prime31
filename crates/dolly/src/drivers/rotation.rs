@@ -1,8 +1,6 @@
 use bevy::prelude::Quat;
 
-use crate::{
-    driver::RigDriver, rig::RigUpdateParams, transform::CameraTransform,
-};
+use crate::{driver::RigDriver, rig::RigUpdateParams, transform::CameraTransform};
 
 /// Directly sets the rotation of the camera
 #[derive(Default, Debug)]

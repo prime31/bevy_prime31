@@ -6,7 +6,6 @@ use crate::{
 };
 use core::fmt::Debug;
 
-
 /// A chain of drivers, calculating displacements, and animating in succession.
 #[derive(Component, Debug)]
 pub struct CameraRig {
@@ -29,12 +28,8 @@ pub struct RigUpdateParams<'a> {
 impl CameraRig {
     /// Returns the first driver of the matching type. Panics if no such driver is present.
     pub fn driver_mut<T: RigDriver>(&mut self) -> &mut T {
-        self.try_driver_mut::<T>().unwrap_or_else(|| {
-            panic!(
-                "No {} driver found in the CameraRig",
-                std::any::type_name::<T>()
-            )
-        })
+        self.try_driver_mut::<T>()
+            .unwrap_or_else(|| panic!("No {} driver found in the CameraRig", std::any::type_name::<T>()))
     }
 
     /// Returns the Some with the first driver of the matching type, or `None` if no such driver is present.
@@ -46,12 +41,8 @@ impl CameraRig {
 
     /// Returns the first driver of the matching type. Panics if no such driver is present.
     pub fn driver<T: RigDriver>(&self) -> &T {
-        self.try_driver::<T>().unwrap_or_else(|| {
-            panic!(
-                "No {} driver found in the CameraRig",
-                std::any::type_name::<T>()
-            )
-        })
+        self.try_driver::<T>()
+            .unwrap_or_else(|| panic!("No {} driver found in the CameraRig", std::any::type_name::<T>()))
     }
 
     /// Returns the Some with the first driver of the matching type, or `None` if no such driver is present.

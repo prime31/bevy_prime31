@@ -14,11 +14,7 @@ fn main() {
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>) {
     // plane
     commands.spawn(PbrBundle {
         mesh: meshes.add(Mesh::from(shape::Plane {
@@ -165,11 +161,7 @@ fn tick(
         up = 1.0;
     }
 
-    let boost = if keys.pressed(KeyCode::LShift) {
-        1.0
-    } else {
-        0.0
-    };
+    let boost = if keys.pressed(KeyCode::LShift) { 1.0 } else { 0.0 };
 
     if keys.just_pressed(KeyCode::C) {
         *use_mouse_motion = !*use_mouse_motion;
@@ -190,9 +182,8 @@ fn tick(
         }
     }
 
-    let move_vec = camera_transform.rotation
-        * Vec3::new(right, up, -forward).clamp_length_max(1.0)
-        * 10.0f32.powf(boost);
+    let move_vec =
+        camera_transform.rotation * Vec3::new(right, up, -forward).clamp_length_max(1.0) * 10.0f32.powf(boost);
 
     rig.driver_mut::<YawPitch>()
         .rotate_yaw_pitch(-0.3 * mouse_delta.x, -0.3 * mouse_delta.y);

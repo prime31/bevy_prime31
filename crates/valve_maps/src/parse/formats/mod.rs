@@ -33,9 +33,12 @@ impl Map {
             .entities
             .iter()
             .flat_map(|e| {
-                e.brushes
-                    .iter()
-                    .flat_map(|b| b.planes.iter().filter(|p| p.texture.name != "__TB_empty").map(|p| &p.texture.name))
+                e.brushes.iter().flat_map(|b| {
+                    b.planes
+                        .iter()
+                        .filter(|p| p.texture.name != "__TB_empty")
+                        .map(|p| &p.texture.name)
+                })
             })
             .collect();
 

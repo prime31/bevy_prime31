@@ -13,11 +13,7 @@ fn main() {
         .run();
 }
 
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<StandardMaterial>>) {
     let camera_position = Vec3::new(4., 3., 8.);
     let player_position = Vec3::new(2., 0.25, 2.);
 
@@ -162,8 +158,7 @@ fn tick(
     let delta_move = get_move_input(keys);
     let mut player_transform = player_q.single_mut();
     player_transform.rotate_y(delta_move.x);
-    player_transform.translation =
-        player_transform.translation + player_transform.forward() * delta_move.z;
+    player_transform.translation = player_transform.translation + player_transform.forward() * delta_move.z;
 
     let (mut rig, mut camera_transform) = rig_q.single_mut();
     rig.driver_mut::<Position>().position = player_transform.translation;

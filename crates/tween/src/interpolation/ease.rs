@@ -316,8 +316,7 @@ macro_rules! impl_ease_trait_for {
                 use self::$T::PI_2;
                 let p = $T::clamp(self);
                 if p < 0.5 {
-                    0.5 * (13.0 * PI_2 * (2.0 * p)).sin()
-                        * self::$T::FLOAT_2.powf(10.0 * ((2.0 * p) - 1.0))
+                    0.5 * (13.0 * PI_2 * (2.0 * p)).sin() * self::$T::FLOAT_2.powf(10.0 * ((2.0 * p) - 1.0))
                 } else {
                     0.5 * ((-13.0 * PI_2 * ((2.0 * p - 1.0) + 1.0)).sin()
                         * self::$T::FLOAT_2.powf(-10.0 * (2.0 * p - 1.0))

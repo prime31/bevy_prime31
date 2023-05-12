@@ -1,12 +1,9 @@
 [package]
 name = "egui_helper"
 version = "0.0.1"
-edition = "2018"
+edition = "2021"
 description = ""
 readme = "README.md"
-
-[workspace]
-resolver = "2"
 
 [dependencies]
 bevy = "0.10"

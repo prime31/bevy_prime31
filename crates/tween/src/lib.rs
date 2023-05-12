@@ -145,8 +145,7 @@ pub mod unit_sphere;
 pub use lens::Lens;
 pub use plugin::{component_animator_system, AnimationSystem, TweeningPlugin};
 pub use tweenable::{
-    BoxedTweenable, Delay, Sequence, Targetable, TotalDuration, Tracks, Tween, TweenCompleted,
-    TweenState, Tweenable,
+    BoxedTweenable, Delay, Sequence, Targetable, TotalDuration, Tracks, Tween, TweenCompleted, TweenState, Tweenable,
 };
 
 pub mod lens;
@@ -404,9 +403,7 @@ pub struct Animator<T: Component> {
 
 impl<T: Component + std::fmt::Debug> std::fmt::Debug for Animator<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Animator")
-            .field("state", &self.state)
-            .finish()
+        f.debug_struct("Animator").field("state", &self.state).finish()
     }
 }
 

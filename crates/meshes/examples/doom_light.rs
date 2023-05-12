@@ -1,7 +1,4 @@
-use bevy::{
-    pbr::{CascadeShadowConfigBuilder, NotShadowCaster},
-    prelude::*,
-};
+use bevy::{pbr::NotShadowCaster, prelude::*};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use cameras::flycam::FlycamPlugin;
 use meshes::doom_light::*;

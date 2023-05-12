@@ -1,6 +1,6 @@
 use core::fmt::Debug;
 
-use bevy::prelude::{Vec3, Quat};
+use bevy::prelude::{Quat, Vec3};
 
 /// A thin wrapper over a `Vec3` and a `Quat`
 #[derive(Clone, Copy, Debug)]
@@ -12,10 +12,7 @@ pub struct CameraTransform {
 impl CameraTransform {
     ///
     pub fn from_position_rotation(position: Vec3, rotation: Quat) -> Self {
-        Self {
-            position,
-            rotation,
-        }
+        Self { position, rotation }
     }
 
     ///

@@ -1,5 +1,8 @@
-use bevy::{prelude::*};
-use bevy_inspector_egui::{quick::WorldInspectorPlugin, bevy_egui::{EguiSet, EguiContext}};
+use bevy::prelude::*;
+use bevy_inspector_egui::{
+    bevy_egui::{EguiContext, EguiSet},
+    quick::WorldInspectorPlugin,
+};
 
 pub use bevy_inspector_egui;
 
@@ -24,14 +27,16 @@ impl Plugin for EguiHelperPlugin {
             WorldInspectorPlugin::new().run_if(move |res: Option<Res<EguiHelperState>>| match res {
                 Some(res) => res.enabled,
                 None => true,
-            })
-        ).add_system(update.after(EguiSet::ProcessInput).in_base_set(CoreSet::PreUpdate));
+            }),
+        )
+        .add_system(update.after(EguiSet::ProcessInput).in_base_set(CoreSet::PreUpdate));
     }
 }
 
-fn update(mut q: Query<&mut EguiContext>, mut state: ResMut<EguiHelperState>, keyboard_input: Res<Input<KeyCode>>,) {
+fn update(mut q: Query<&mut EguiContext>, mut state: ResMut<EguiHelperState>, keyboard_input: Res<Input<KeyCode>>) {
     for egui in q.iter_mut() {
-        state.wants_input = egui.clone().get_mut().wants_pointer_input() || egui.clone().get_mut().wants_keyboard_input();
+        state.wants_input =
+            egui.clone().get_mut().wants_pointer_input() || egui.clone().get_mut().wants_keyboard_input();
     }
 
     if keyboard_input.just_pressed(KeyCode::Grave) {

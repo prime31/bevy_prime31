@@ -1,5 +1,5 @@
 use bevy::{prelude::*, reflect::TypeUuid};
-use bevy_rapier3d::prelude::{Collider, Sensor, ActiveEvents, RigidBody};
+use bevy_rapier3d::prelude::{ActiveEvents, Collider, RigidBody, Sensor};
 
 use self::loader::{ValveMapEntity, ValveMapLoader};
 
@@ -81,7 +81,7 @@ fn instantiate_map_entities(
     commands: &mut Commands,
     entity: Entity,
     map: &ValveMap,
-    mut q_players: Query<&mut Transform, With<ValveMapPlayer>>
+    mut q_players: Query<&mut Transform, With<ValveMapPlayer>>,
 ) {
     commands.entity(entity).with_children(|builder| {
         for map_entity in &map.entities {
@@ -110,7 +110,10 @@ fn instantiate_map_entities(
 
             if let Some("spawn_point") = map_entity.get_property("classname") {
                 let position = map_entity.get_vec3_property("origin").unwrap();
-                let rotation = map_entity.get_f32_property("angle").and_then(|a| Some(a - 90.)).unwrap_or(0.);
+                let rotation = map_entity
+                    .get_f32_property("angle")
+                    .and_then(|a| Some(a - 90.))
+                    .unwrap_or(0.);
                 for mut tf in q_players.iter_mut() {
                     tf.translation = position;
                     tf.rotation = Quat::from_rotation_y(rotation.to_radians());

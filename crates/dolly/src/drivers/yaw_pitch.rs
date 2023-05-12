@@ -1,4 +1,4 @@
-use bevy::prelude::{Quat, EulerRot};
+use bevy::prelude::{EulerRot, Quat};
 
 use crate::{driver::RigDriver, rig::RigUpdateParams, transform::CameraTransform};
 

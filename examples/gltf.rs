@@ -1,4 +1,8 @@
-use bevy::{gltf::{Gltf, GltfMesh}, pbr::CascadeShadowConfigBuilder, prelude::*};
+use bevy::{
+    gltf::{Gltf, GltfMesh},
+    pbr::CascadeShadowConfigBuilder,
+    prelude::*,
+};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use cameras::flycam::FlycamPlugin;
 
@@ -52,7 +56,9 @@ fn check_loaded_scene(
     scenes: Res<Assets<Scene>>,
     meshes: Res<Assets<GltfMesh>>,
 ) {
-    if gltf_state.is_loaded { return; };
+    if gltf_state.is_loaded {
+        return;
+    };
 
     if let Some(gltf) = gltf_assets.get(&gltf_state.handle) {
         for scene in &gltf.scenes {

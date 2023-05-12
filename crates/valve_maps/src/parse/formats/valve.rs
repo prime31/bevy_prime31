@@ -1,39 +1,32 @@
 use bevy::prelude::Vec3;
 
-use {
-    crate::parse::{
-        common::{fields, parse},
-        formats::{
-            shared::{separator, sep_terminated, maybe_sep_terminated}
+use crate::parse::{
+    common::{fields, parse},
+    core::{
+        nom::{
+            character::char,
+            combinator::{map, opt},
+            error::ParseError,
+            number::float,
+            sequence::{delimited, pair},
         },
-        core::{
-            Parse,
-            Input,
-            ParseResult,
-            nom::{
-                number::float,
-                character::char,
-                error::ParseError,
-                combinator::{map, opt},
-                sequence::{pair, delimited}
-            },
-        },
-    }
+        Input, Parse, ParseResult,
+    },
+    formats::shared::{maybe_sep_terminated, sep_terminated, separator},
 };
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Vec2 {
     pub x: f32,
-    pub y: f32
+    pub y: f32,
 }
 
-impl <'i, E> Parse<'i, E> for Vec2
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for Vec2
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Vec2:
-            x = sep_terminated(float),
-            y = float
-        )(input)
+        fields!(Vec2: x = sep_terminated(float), y = float)(input)
     }
 }
 
@@ -46,14 +39,16 @@ pub struct Valve;
 pub struct TextureAlignment {
     pub axes: Axes,
     pub rotation: f32,
-    pub scale: Scale
+    pub scale: Scale,
 }
 
-impl <'i, E> Parse<'i, E> for TextureAlignment
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for TextureAlignment
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(TextureAlignment:
-            axes = maybe_sep_terminated(parse),
+        fields!(
+            TextureAlignment: axes = maybe_sep_terminated(parse),
             rotation = sep_terminated(float),
             scale = parse
         )(input)
@@ -64,16 +59,15 @@ where E: ParseError<Input<'i>> + Clone {
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Axes {
     pub u: Axis,
-    pub v: Axis
+    pub v: Axis,
 }
 
-impl <'i, E> Parse<'i, E> for Axes
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for Axes
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        fields!(Axes:
-            u = maybe_sep_terminated(parse),
-            v = parse
-        )(input)
+        fields!(Axes: u = maybe_sep_terminated(parse), v = parse)(input)
     }
 }
 
@@ -90,19 +84,18 @@ where
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Axis {
     pub normal: Vec3,
-    pub offset: f32
+    pub offset: f32,
 }
 
-impl <'i, E> Parse<'i, E> for Axis
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for Axis
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
         delimited(
             pair(char('['), opt(separator)),
-            fields!(Axis:
-                normal = sep_terminated(parse),
-                offset = float
-            ),
-            pair(opt(separator), char(']'))
+            fields!(Axis: normal = sep_terminated(parse), offset = float),
+            pair(opt(separator), char(']')),
         )(input)
     }
 }
@@ -111,18 +104,14 @@ where E: ParseError<Input<'i>> + Clone {
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Scale {
     pub u: f32,
-    pub v: f32
+    pub v: f32,
 }
 
-impl <'i, E> Parse<'i, E> for Scale
-where E: ParseError<Input<'i>> + Clone {
+impl<'i, E> Parse<'i, E> for Scale
+where
+    E: ParseError<Input<'i>> + Clone,
+{
     fn parse(input: Input<'i>) -> ParseResult<Self, E> {
-        map(
-            Vec2::parse,
-            |vec| Scale {
-                u: vec.x,
-                v: vec.y
-            }
-        )(input)
+        map(Vec2::parse, |vec| Scale { u: vec.x, v: vec.y })(input)
     }
 }
