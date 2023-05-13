@@ -30,9 +30,7 @@ pub fn update(
     for (tf, mut controller, controller_out, mut input) in query.iter_mut() {
         // friction
         {
-            let mut vel = input.vel;
-            vel.y = 0.0;
-            let speed = vel.length();
+            let speed = input.vel.length();
             let mut drop = 0.0;
 
             // only if grounded
@@ -67,8 +65,11 @@ pub fn update(
         let air_accel = 7.0;
 
         let target_speed = if input.sprint { run_speed } else { walk_speed };
-
         wish_speed *= target_speed;
+
+        if input.dash_pressed {
+            wish_speed *= 50.0;
+        }
 
         if controller_out.grounded {
             let add_speed = acceleration(
@@ -83,7 +84,7 @@ pub fn update(
             // reset gravity rather than accrue it
             input.vel.y = -gravity * time.delta_seconds();
 
-            if input.jump {
+            if input.jump_pressed {
                 input.vel.y = jump_speed;
             }
         } else {

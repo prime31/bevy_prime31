@@ -8,10 +8,11 @@ pub struct FpsPlayer;
 
 #[derive(Component, Default, Reflect)]
 pub struct FpsControllerInput {
-    pub fly: bool,
     pub sprint: bool,
-    pub jump: bool,
-    pub crouch: bool,
+    pub jump_pressed: bool,
+    pub jump_down: bool,
+    pub dash_pressed: bool,
+    pub dash_down: bool,
     pub pitch: f32,
     pub yaw: f32,
     pub movement: Vec3,
@@ -27,12 +28,10 @@ pub struct FpsControllerInputConfig {
     pub key_back: KeyCode,
     pub key_left: KeyCode,
     pub key_right: KeyCode,
-    pub key_up: KeyCode,
-    pub key_down: KeyCode,
     pub key_sprint: KeyCode,
+    pub key_dash: KeyCode,
     pub key_jump: KeyCode,
     pub key_fly: KeyCode,
-    pub key_crouch: KeyCode,
 }
 
 impl Default for FpsControllerInputConfig {
@@ -44,12 +43,10 @@ impl Default for FpsControllerInputConfig {
             key_back: KeyCode::S,
             key_left: KeyCode::A,
             key_right: KeyCode::D,
-            key_up: KeyCode::E,
-            key_down: KeyCode::Q,
             key_sprint: KeyCode::LShift,
+            key_dash: KeyCode::E,
             key_jump: KeyCode::Space,
             key_fly: KeyCode::F,
-            key_crouch: KeyCode::C,
         }
     }
 }

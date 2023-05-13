@@ -215,7 +215,7 @@ fn apply_controls(mut query: Query<(&Transform, &mut TnuaPlatformerControls, &Fp
         *controls = TnuaPlatformerControls {
             desired_velocity: direction,
             desired_forward: Vec3::ZERO,
-            jump: input.jump.then(|| 1.0),
+            jump: input.jump_pressed.then(|| 1.0),
         };
     }
 }

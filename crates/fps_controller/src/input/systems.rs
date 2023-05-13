@@ -88,9 +88,10 @@ pub(crate) fn controller_input(
         input.yaw = mouse_delta.x;
 
         input.sprint = key_input.pressed(controller.key_sprint);
-        input.jump = key_input.just_pressed(controller.key_jump);
-        input.fly = key_input.just_pressed(controller.key_fly);
-        input.crouch = key_input.pressed(controller.key_crouch);
+        input.jump_pressed = key_input.just_pressed(controller.key_jump);
+        input.jump_down = key_input.pressed(controller.key_jump);
+        input.dash_pressed = key_input.just_pressed(controller.key_dash);
+        input.dash_down = key_input.pressed(controller.key_dash);
 
         fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode) -> f32 {
             let get_pressed = |b| if b { 1.0 } else { 0.0 };
