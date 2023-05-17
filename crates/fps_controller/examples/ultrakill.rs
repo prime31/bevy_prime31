@@ -85,7 +85,7 @@ fn setup_scene(
                     RenderPlayer,
                     Camera3dBundle {
                         transform: Transform::from_xyz(0.0, 1.0, 0.0),
-                        projection: Projection::Perspective(PerspectiveProjection { fov: 90.0, ..default() }),
+                        projection: Projection::Perspective(PerspectiveProjection { fov: 100.0_f32.to_radians(), ..default() }),
                         ..default()
                     },
                     RenderLayers::default().without(1), // all but our LogicalPlayer
