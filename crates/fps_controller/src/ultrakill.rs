@@ -141,8 +141,6 @@ pub fn controller_move(
                 filter,
             );
 
-            let wish_direction = input.movement_dir;
-
             let mut wish_speed = if input.dash.pressed {
                 controller.dash_speed
             } else if input.slide.down {
@@ -171,7 +169,7 @@ pub fn controller_move(
                     }
                 }
 
-                let mut add = acceleration(wish_direction, wish_speed, controller.acceleration, velocity.linvel, dt);
+                let mut add = acceleration(input.movement_dir, wish_speed, controller.acceleration, velocity.linvel, dt);
                 if !has_traction {
                     add.y -= controller.gravity * dt;
                 }
@@ -193,7 +191,7 @@ pub fn controller_move(
                 wish_speed = f32::min(wish_speed, controller.air_speed_cap);
 
                 let mut add = acceleration(
-                    wish_direction,
+                    input.movement_dir,
                     wish_speed,
                     controller.air_acceleration,
                     velocity.linvel,
