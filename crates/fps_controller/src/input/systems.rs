@@ -68,13 +68,13 @@ pub(crate) fn controller_input(
     key_input: Res<Input<KeyCode>>,
     egui_state: Res<EguiHelperState>,
     mut mouse_events: EventReader<MouseMotion>,
-    mut query: Query<(&FpsControllerInputConfig, &mut FpsControllerInput)>,
+    mut query: Query<(&Transform, &FpsControllerInputConfig, &mut FpsControllerInput)>,
 ) {
     if egui_state.wants_input {
         return;
     };
 
-    for (controller, mut input) in query.iter_mut() {
+    for (tf, controller, mut input) in query.iter_mut() {
         if !controller.enable_input {
             continue;
         }
@@ -87,11 +87,17 @@ pub(crate) fn controller_input(
         input.pitch = mouse_delta.y;
         input.yaw = mouse_delta.x;
 
-        input.sprint = key_input.pressed(controller.key_sprint);
-        input.jump_pressed = key_input.just_pressed(controller.key_jump);
-        input.jump_down = key_input.pressed(controller.key_jump);
-        input.dash_pressed = key_input.just_pressed(controller.key_dash);
-        input.dash_down = key_input.pressed(controller.key_dash);
+        input.slide.pressed = key_input.just_pressed(controller.key_slide);
+        input.slide.down = key_input.pressed(controller.key_slide);
+        input.slide.released = key_input.just_released(controller.key_slide);
+
+        input.jump.pressed = key_input.just_pressed(controller.key_jump);
+        input.jump.down = key_input.pressed(controller.key_jump);
+        input.jump.released = key_input.just_released(controller.key_jump);
+
+        input.dash.pressed = key_input.just_pressed(controller.key_dash);
+        input.dash.down = key_input.pressed(controller.key_dash);
+        input.dash.released = key_input.just_released(controller.key_dash);
 
         fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode) -> f32 {
             let get_pressed = |b| if b { 1.0 } else { 0.0 };
@@ -104,6 +110,8 @@ pub(crate) fn controller_input(
             get_axis(&key_input, controller.key_forward, controller.key_back),
         )
         .normalize_or_zero();
+
+        input.movement_dir = tf.forward() * input.movement.z + tf.right() * input.movement.x;
     }
 }
 

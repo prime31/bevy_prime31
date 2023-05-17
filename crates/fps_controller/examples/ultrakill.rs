@@ -149,12 +149,12 @@ fn print_collision_events(
     mut collision_events: EventReader<CollisionEvent>,
     mut contact_force_events: EventReader<ContactForceEvent>,
 ) {
-    for collision_event in collision_events.iter() {
-        println!("Received collision event: {:?}", collision_event);
+    for _collision_event in collision_events.iter() {
+        // println!("Received collision event: {:?}", _collision_event);
     }
 
-    for contact_force_event in contact_force_events.iter() {
-        println!("Received contact force event: {:?}", contact_force_event);
+    for _contact_force_event in contact_force_events.iter() {
+        // println!("Received contact force event: {:?}", _contact_force_event);
     }
 }
 
@@ -185,10 +185,11 @@ fn display_text(mut controller_query: Query<(&Transform, &Velocity)>, mut text_q
     for (transform, velocity) in &mut controller_query {
         for mut text in &mut text_query {
             text.sections[0].value = format!(
-                "vel: {:.2}, {:.2}, {:.2}\npos: {:.2}, {:.2}, {:.2}\nspd: {:.2}",
+                "vel: {:.2}, {:.2}, {:.2}\nspeed: {:.2}\npos: {:.2}, {:.2}, {:.2}\nspd: {:.2}",
                 velocity.linvel.x,
                 velocity.linvel.y,
                 velocity.linvel.z,
+                velocity.linvel.length(),
                 transform.translation.x,
                 transform.translation.y,
                 transform.translation.z,

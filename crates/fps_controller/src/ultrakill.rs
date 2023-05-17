@@ -1,7 +1,7 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_rapier3d::prelude::*;
 
-use crate::input::{FpsControllerStages, FpsControllerInput};
+use crate::input::{FpsControllerInput, FpsControllerStages};
 
 #[derive(Default)]
 pub struct UltrakillControllerPlugin;
@@ -20,7 +20,8 @@ pub struct FpsController {
     pub radius: f32,
     pub gravity: f32,
     pub walk_speed: f32,
-    pub run_speed: f32,
+    pub slide_speed: f32,
+    pub dash_speed: f32,
     pub forward_speed: f32,
     pub side_speed: f32,
     pub air_speed_cap: f32,
@@ -34,7 +35,6 @@ pub struct FpsController {
     pub friction_speed_cutoff: f32,
     pub jump_speed: f32,
     pub fly_speed: f32,
-    pub crouched_speed: f32,
     pub crouch_speed: f32,
     pub uncrouch_speed: f32,
     pub height: f32,
@@ -69,14 +69,14 @@ impl Default for FpsController {
             fast_fly_speed: 30.0,
             gravity: 23.0,
             walk_speed: 9.0,
-            run_speed: 14.0,
+            slide_speed: 30.0,
+            dash_speed: 1000.0,
             forward_speed: 30.0,
-            side_speed: 30.0,
+            side_speed: 50.0,
             air_speed_cap: 2.0,
             air_acceleration: 20.0,
             max_air_speed: 15.0,
-            crouched_speed: 5.0,
-            crouch_speed: 6.0,
+            crouch_speed: 50.0,
             uncrouch_speed: 8.0,
             height: 1.0,
             upright_height: 2.0,
@@ -140,26 +140,15 @@ pub fn controller_move(
                 filter,
             );
 
-            let mut move_to_world = Mat3::from_axis_angle(Vec3::Y, input.yaw);
-            move_to_world.z_axis *= -1.0; // Forward is -Z
+            let wish_direction = input.movement_dir;
 
-            let speeds = Vec3::new(controller.side_speed, 0.0, controller.forward_speed);
-            let mut wish_direction = transform.forward() * input.movement.z + transform.right() * input.movement.x;
-            wish_direction *= speeds;
-
-            let mut wish_speed = wish_direction.length();
-            if wish_speed > f32::EPSILON {
-                // Avoid division by zero
-                wish_direction /= wish_speed; // Effectively normalize, avoid length computation twice
-            }
-            let max_speed = if input.dash_down {
-                controller.crouched_speed
-            } else if input.sprint {
-                controller.run_speed
+            let mut wish_speed = if input.dash.pressed {
+                controller.dash_speed
+            } else if input.slide.down {
+                controller.slide_speed
             } else {
                 controller.walk_speed
             };
-            wish_speed = f32::min(wish_speed, max_speed);
 
             if let Some((_, toi)) = ground_cast {
                 let has_traction = Vec3::dot(toi.normal1, Vec3::Y) > controller.traction_normal_cutoff;
@@ -191,7 +180,7 @@ pub fn controller_move(
                     let linvel = velocity.linvel;
                     velocity.linvel -= Vec3::dot(linvel, toi.normal1) * toi.normal1;
 
-                    if input.jump_pressed {
+                    if input.jump.pressed {
                         velocity.linvel.y = controller.jump_speed;
                     }
                 }
@@ -224,7 +213,7 @@ pub fn controller_move(
             let crouch_height = controller.crouch_height;
             let upright_height = controller.upright_height;
 
-            let crouch_speed = if input.dash_down { -controller.crouch_speed } else { controller.uncrouch_speed };
+            let crouch_speed = if input.dash.down { -controller.crouch_speed } else { controller.uncrouch_speed };
             controller.height += dt * crouch_speed;
             controller.height = controller.height.clamp(crouch_height, upright_height);
 

@@ -6,16 +6,22 @@ pub struct RenderPlayer;
 #[derive(Component)]
 pub struct FpsPlayer;
 
+#[derive(Default, Reflect)]
+pub struct InputState {
+    pub pressed: bool,
+    pub down: bool,
+    pub released: bool,
+}
+
 #[derive(Component, Default, Reflect)]
 pub struct FpsControllerInput {
-    pub sprint: bool,
-    pub jump_pressed: bool,
-    pub jump_down: bool,
-    pub dash_pressed: bool,
-    pub dash_down: bool,
+    pub jump: InputState,
+    pub slide: InputState,
+    pub dash: InputState,
     pub pitch: f32,
     pub yaw: f32,
     pub movement: Vec3,
+    pub movement_dir: Vec3,
     // move these to some state struct
     pub vel: Vec3,
 }
@@ -28,10 +34,9 @@ pub struct FpsControllerInputConfig {
     pub key_back: KeyCode,
     pub key_left: KeyCode,
     pub key_right: KeyCode,
-    pub key_sprint: KeyCode,
+    pub key_slide: KeyCode,
     pub key_dash: KeyCode,
     pub key_jump: KeyCode,
-    pub key_fly: KeyCode,
 }
 
 impl Default for FpsControllerInputConfig {
@@ -43,10 +48,9 @@ impl Default for FpsControllerInputConfig {
             key_back: KeyCode::S,
             key_left: KeyCode::A,
             key_right: KeyCode::D,
-            key_sprint: KeyCode::LShift,
-            key_dash: KeyCode::E,
+            key_slide: KeyCode::LControl,
+            key_dash: KeyCode::LShift,
             key_jump: KeyCode::Space,
-            key_fly: KeyCode::F,
         }
     }
 }

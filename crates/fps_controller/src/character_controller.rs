@@ -64,10 +64,10 @@ pub fn update(
         let ground_accel = 10.0;
         let air_accel = 7.0;
 
-        let target_speed = if input.sprint { run_speed } else { walk_speed };
+        let target_speed = if input.slide.down { run_speed } else { walk_speed };
         wish_speed *= target_speed;
 
-        if input.dash_pressed {
+        if input.dash.pressed {
             wish_speed *= 50.0;
         }
 
@@ -84,7 +84,7 @@ pub fn update(
             // reset gravity rather than accrue it
             input.vel.y = -gravity * time.delta_seconds();
 
-            if input.jump_pressed {
+            if input.jump.pressed {
                 input.vel.y = jump_speed;
             }
         } else {
