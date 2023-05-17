@@ -1,14 +1,15 @@
+use crate::input::{FpsControllerInput, FpsControllerStages};
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_rapier3d::prelude::*;
-
-use crate::input::{FpsControllerInput, FpsControllerStages};
+use egui_helper::bevy_inspector_egui::{self, bevy_egui::EguiContext, egui};
 
 #[derive(Default)]
 pub struct UltrakillControllerPlugin;
 
 impl Plugin for UltrakillControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(controller_move.in_set(FpsControllerStages::Logic));
+        app.add_system(controller_move.in_set(FpsControllerStages::Logic))
+            .add_system(debug_ui.run_if(egui_helper::run_if_egui_enabled));
     }
 }
 
@@ -251,4 +252,20 @@ fn acceleration(wish_direction: Vec3, wish_speed: f32, acceleration: f32, veloci
 
     let acceleration_speed = f32::min(acceleration * wish_speed * dt, add_speed);
     wish_direction * acceleration_speed
+}
+
+fn debug_ui(world: &mut World) {
+    let mut egui_context = world
+        .query_filtered::<&mut EguiContext, With<bevy::window::PrimaryWindow>>()
+        .single(world)
+        .clone();
+
+    let entity = world.query_filtered::<Entity, With<FpsController>>().single(world);
+
+    egui::Window::new("Hello").show(egui_context.get_mut(), |ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            bevy_inspector_egui::bevy_inspector::ui_for_entity(world, entity, ui);
+            ui.allocate_space(ui.available_size());
+        });
+    });
 }

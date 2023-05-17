@@ -70,22 +70,21 @@ pub(crate) fn controller_input(
     mut mouse_events: EventReader<MouseMotion>,
     mut query: Query<(&Transform, &FpsControllerInputConfig, &mut FpsControllerInput)>,
 ) {
-    if egui_state.wants_input {
-        return;
-    };
-
     for (tf, controller, mut input) in query.iter_mut() {
         if !controller.enable_input {
             continue;
         }
 
-        let mut mouse_delta: Vec2 = mouse_events
-            .iter()
-            .fold(Vec2::ZERO, |collector, evt| collector + evt.delta);
-        mouse_delta *= controller.sensitivity * time.delta_seconds(); // is this correct calcuation
+        // ignore mouse input if egui wants input
+        if !egui_state.wants_input {
+            let mut mouse_delta: Vec2 = mouse_events
+                .iter()
+                .fold(Vec2::ZERO, |collector, evt| collector + evt.delta);
+            mouse_delta *= controller.sensitivity * time.delta_seconds(); // is this correct calcuation
 
-        input.pitch = mouse_delta.y;
-        input.yaw = mouse_delta.x;
+            input.pitch = mouse_delta.y;
+            input.yaw = mouse_delta.x;
+        }
 
         input.slide.pressed = key_input.just_pressed(controller.key_slide);
         input.slide.down = key_input.pressed(controller.key_slide);

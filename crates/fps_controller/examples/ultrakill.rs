@@ -48,7 +48,7 @@ fn setup_scene(
     assets: Res<AssetServer>,
 ) {
     commands
-        .spawn(Collider::cuboid(40.0, 0.1, 40.0))
+        .spawn(Collider::cuboid(140.0, 0.1, 140.0))
         .insert(Restitution::coefficient(1.0))
         .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
 
@@ -159,19 +159,24 @@ fn print_collision_events(
 }
 
 fn manage_cursor(
-    btn: Res<Input<MouseButton>>,
     key: Res<Input<KeyCode>>,
+    btn: Res<Input<MouseButton>>,
+    egui_state: Res<egui_helper::EguiHelperState>,
     mut window_query: Query<&mut Window>,
     mut controller_query: Query<&mut FpsController>,
 ) {
     let mut window = window_query.single_mut();
-    if btn.just_pressed(MouseButton::Left) {
-        window.cursor.grab_mode = CursorGrabMode::Locked;
-        window.cursor.visible = false;
-        for mut controller in &mut controller_query {
-            controller.enable_input = true;
+
+    if !egui_state.wants_input && !egui_state.enabled {
+        if btn.just_pressed(MouseButton::Left) {
+            window.cursor.grab_mode = CursorGrabMode::Locked;
+            window.cursor.visible = false;
+            for mut controller in &mut controller_query {
+                controller.enable_input = true;
+            }
         }
     }
+
     if key.just_pressed(KeyCode::Escape) {
         window.cursor.grab_mode = CursorGrabMode::None;
         window.cursor.visible = true;

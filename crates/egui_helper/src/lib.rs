@@ -23,13 +23,16 @@ impl Plugin for EguiHelperPlugin {
             enabled: false,
             wants_input: false,
         })
-        .add_plugin(
-            WorldInspectorPlugin::new().run_if(move |res: Option<Res<EguiHelperState>>| match res {
-                Some(res) => res.enabled,
-                None => true,
-            }),
-        )
+        .add_plugin(WorldInspectorPlugin::new().run_if(run_if_egui_enabled))
         .add_system(update.after(EguiSet::ProcessInput).in_base_set(CoreSet::PreUpdate));
+    }
+}
+
+/// helpfer for system `run_if` conditions to only run the system if egui is enabled
+pub fn run_if_egui_enabled(res: Option<Res<EguiHelperState>>) -> bool {
+    match res {
+        Some(res) => res.enabled,
+        None => true,
     }
 }
 
