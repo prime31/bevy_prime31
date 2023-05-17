@@ -75,7 +75,7 @@ pub(crate) fn controller_input(
             continue;
         }
 
-        // ignore mouse input if egui wants input
+        // ignore mouse input if egui wants input but still gather keyboard input to avoid stuck keys
         if !egui_state.wants_input {
             let mut mouse_delta: Vec2 = mouse_events
                 .iter()
@@ -112,14 +112,6 @@ pub(crate) fn controller_input(
 
         input.movement_dir = tf.forward() * input.movement.z + tf.right() * input.movement.x;
     }
-}
-
-pub(crate) fn calculate_movement(
-    _time: Res<Time>,
-    _query: Query<&FpsControllerInput>,
-    _render_query: Query<&Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
-) {
-    // TODO: should this handle doing basic integration of input + frictions/accelerations?
 }
 
 #[allow(dead_code)]

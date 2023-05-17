@@ -37,7 +37,6 @@ impl Plugin for FpsInputPlugin {
             .register_type::<FpsControllerInputConfig>()
             .add_system(setup.on_startup().in_base_set(StartupSet::PostStartup))
             .add_systems((controller_input, sync_rotation_input).in_set(FpsControllerStages::Input))
-            .add_system(calculate_movement)
             .add_plugin(DebugLinesPlugin::with_depth_test(true))
             .add_plugin(PolylinePlugin);
     }
