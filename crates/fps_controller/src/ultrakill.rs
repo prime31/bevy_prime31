@@ -1,6 +1,6 @@
 use crate::input::{FpsControllerInput, FpsControllerStages};
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_rapier3d::{prelude::*, na::OPoint};
+use bevy_rapier3d::prelude::*;
 use egui_helper::bevy_inspector_egui::{self, bevy_egui::EguiContext, egui};
 
 #[derive(Default)]
@@ -118,12 +118,18 @@ pub fn controller_move(
             );
 
             // wall intersection check, we use a capsule that is shorter but wider than the player
-            let cast_capsule = Collider::capsule_y(0.2, capsule.radius * 1.05);
+            let cast_cyilinder = Collider::cylinder(0.4, 0.6);
             let filter = QueryFilter::default().exclude_rigid_body(entity).exclude_sensors();
-            let _intersects = physics_context.intersections_with_shape(transform.translation, transform.rotation, &cast_capsule, filter, |entity| {
-                println!("intersected: {:?}", entity);
-                true
-            });
+            let _intersects = physics_context.intersections_with_shape(
+                transform.translation,
+                transform.rotation,
+                &cast_cyilinder,
+                filter,
+                |entity| {
+                    println!("intersected: {:?}", entity);
+                    true
+                },
+            );
 
             let mut wish_speed = if input.dash.pressed {
                 controller.dash_speed
@@ -153,7 +159,13 @@ pub fn controller_move(
                     }
                 }
 
-                let mut add = acceleration(input.movement_dir, wish_speed, controller.acceleration, velocity.linvel, dt);
+                let mut add = acceleration(
+                    input.movement_dir,
+                    wish_speed,
+                    controller.acceleration,
+                    velocity.linvel,
+                    dt,
+                );
                 if !has_traction {
                     add.y -= controller.gravity * dt;
                 }

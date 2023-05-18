@@ -1,3 +1,0 @@
-max_width = 120
-# fn_single_line = true # nightly only
-single_line_if_else_max_width = 120

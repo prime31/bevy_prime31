@@ -122,6 +122,8 @@ pub(crate) fn manage_cursor(
     mut controller_query: Query<&mut FpsControllerInputConfig>,
 ) {
     let mut window = window_query.single_mut();
+
+    // if !egui_state.wants_input && !egui_state.enabled {
     if btn.just_pressed(MouseButton::Left) {
         window.cursor.grab_mode = CursorGrabMode::Locked;
         window.cursor.visible = false;
@@ -129,6 +131,8 @@ pub(crate) fn manage_cursor(
             controller.enable_input = true;
         }
     }
+    // }
+
     if key.just_pressed(KeyCode::Escape) {
         window.cursor.grab_mode = CursorGrabMode::None;
         window.cursor.visible = true;
@@ -161,10 +165,18 @@ pub(crate) fn sync_rotation_input(
     }
 
     player_tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
-    render_tf.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, pitch, move_towards(render_tilt, controller.tilt, 1.0)); // TODO: speed * dt
+    render_tf.rotation = Quat::from_euler(
+        EulerRot::YXZ,
+        0.0,
+        pitch,
+        move_towards(render_tilt, controller.tilt, 1.0),
+    );
+    // TODO: speed * dt
 }
 
 fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
-    if (target - current).abs() <= max_delta { return target }
+    if (target - current).abs() <= max_delta {
+        return target;
+    }
     current + (target - current).signum() * max_delta
 }

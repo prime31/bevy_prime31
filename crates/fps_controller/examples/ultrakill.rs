@@ -1,9 +1,10 @@
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
+    input::mouse::MouseWheel,
     math::Vec3Swizzles,
     prelude::{
         default, AmbientLight, App, AssetPlugin, AssetServer, Camera3dBundle, Color, Commands, PluginGroup, Res,
-        Transform, Vec3, *,
+        Transform, *,
     },
     render::{camera::Viewport, view::RenderLayers},
     window::CursorGrabMode,
@@ -36,7 +37,7 @@ fn main() {
         .add_plugin(FpsInputPlugin)
         .add_plugin(UltrakillControllerPlugin)
         .add_startup_system(setup_scene)
-        .add_systems((print_collision_events, display_text, manage_cursor))
+        .add_systems((print_collision_events, display_text, manage_cursor, zoom_2nd_camera))
         .run();
 }
 
@@ -80,12 +81,26 @@ fn setup_scene(
             FpsController { ..default() },
         ))
         .with_children(|builder| {
+            // example of a wall check sensor collider. not sure if this is better than just doing a shape_cast yet.
+            // let id = builder
+            //     .spawn((
+            //         Collider::cylinder(0.4, 0.6),
+            //         Sensor,
+            //         ActiveEvents::COLLISION_EVENTS,
+            //         Transform::from_xyz(0.0, 0.0, 0.0),
+            //     ))
+            //     .id();
+            // print!("---- cylinder: {:?}", id);
+
             builder
                 .spawn((
                     RenderPlayer,
                     Camera3dBundle {
                         transform: Transform::from_xyz(0.0, 1.0, 0.0),
-                        projection: Projection::Perspective(PerspectiveProjection { fov: 100.0_f32.to_radians(), ..default() }),
+                        projection: Projection::Perspective(PerspectiveProjection {
+                            fov: 100.0_f32.to_radians(),
+                            ..default()
+                        }),
                         ..default()
                     },
                     RenderLayers::default().without(1), // all but our LogicalPlayer
@@ -97,7 +112,7 @@ fn setup_scene(
                     let frame_h = 256 / (1280 / 720);
                     builder.spawn((
                         Camera3dBundle {
-                            transform: Transform::from_xyz(0., 1.5, 15.0),
+                            transform: Transform::from_xyz(0.0, 0.0, 15.0),
                             camera: Camera {
                                 order: 1, // after other camera
                                 viewport: Some(Viewport {
@@ -186,20 +201,36 @@ fn manage_cursor(
     }
 }
 
-fn display_text(mut controller_query: Query<(&Transform, &Velocity)>, mut text_query: Query<&mut Text>) {
-    for (transform, velocity) in &mut controller_query {
+fn display_text(mut controller_query: Query<&Velocity>, mut text_query: Query<&mut Text>) {
+    for velocity in &mut controller_query {
         for mut text in &mut text_query {
             text.sections[0].value = format!(
-                "vel: {:.2}, {:.2}, {:.2}\nspeed: {:.2}\npos: {:.2}, {:.2}, {:.2}\nspd: {:.2}",
+                "vel: {:.2}, {:.2}, {:.2}\nspeed: {:.2}\nxz speed: {:.2}",
                 velocity.linvel.x,
                 velocity.linvel.y,
                 velocity.linvel.z,
                 velocity.linvel.length(),
-                transform.translation.x,
-                transform.translation.y,
-                transform.translation.z,
                 velocity.linvel.xz().length()
             );
         }
+    }
+}
+
+fn zoom_2nd_camera(
+    egui_state: Res<egui_helper::EguiHelperState>,
+    mut ev_scroll: EventReader<MouseWheel>,
+    mut q: Query<&mut Projection, Without<RenderPlayer>>,
+) {
+    if egui_state.wants_input {
+        return;
+    }
+    let scroll = ev_scroll.iter().fold(0.0, |val, evt| val + evt.y);
+    if scroll == 0.0 {
+        return;
+    }
+
+    let Ok(mut proj) = q.get_single_mut() else { return };
+    if let Projection::Perspective(proj) = proj.as_mut() {
+        proj.fov = (proj.fov + scroll * 0.02).clamp(10.0_f32.to_radians(), 100.0_f32.to_radians());
     }
 }
