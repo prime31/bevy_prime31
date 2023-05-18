@@ -23,6 +23,7 @@ pub struct FpsControllerInput {
     pub tilt: f32,
     pub movement: Vec3,
     pub movement_dir: Vec3,
+    pub dodge_slide_dir: Vec3,
     // move these to some state struct
     pub vel: Vec3,
 }
@@ -55,3 +56,6 @@ impl Default for FpsControllerInputConfig {
         }
     }
 }
+
+#[derive(Component, Reflect, Default)]
+pub struct FpsControllerState {}
