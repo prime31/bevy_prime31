@@ -20,6 +20,7 @@ pub struct FpsControllerInput {
     pub dash: InputState,
     pub pitch: f32,
     pub yaw: f32,
+    pub tilt: f32,
     pub movement: Vec3,
     pub movement_dir: Vec3,
     // move these to some state struct

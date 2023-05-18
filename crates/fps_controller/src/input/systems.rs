@@ -141,26 +141,30 @@ pub(crate) fn manage_cursor(
 /// syncs the yaw to the FpsPlayer and the pitch to the RenderPlayer
 pub(crate) fn sync_rotation_input(
     egui_state: Res<EguiHelperState>,
-    mut logical_query: Query<(&mut Transform, &FpsControllerInput), With<FpsPlayer>>,
+    mut player_query: Query<(&mut Transform, &FpsControllerInput), With<FpsPlayer>>,
     mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
 ) {
     if egui_state.wants_input {
         return;
     };
 
-    for (mut logical_tf, controller) in logical_query.iter_mut() {
-        for mut render_tf in render_query.iter_mut() {
-            let (_, render_pitch, _) = render_tf.rotation.to_euler(EulerRot::YXZ);
-            let (logical_yaw, _, _) = logical_tf.rotation.to_euler(EulerRot::YXZ);
+    let Ok((mut player_tf, controller)) = player_query.get_single_mut() else { return };
+    let Ok(mut render_tf) = render_query.get_single_mut() else { return };
 
-            let mut yaw = logical_yaw - controller.yaw;
-            let pitch = (render_pitch - controller.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
-            if yaw.abs() > PI {
-                yaw = yaw.rem_euclid(TAU);
-            }
+    let (_, render_pitch, render_tilt) = render_tf.rotation.to_euler(EulerRot::YXZ);
+    let (logical_yaw, _, _) = player_tf.rotation.to_euler(EulerRot::YXZ);
 
-            logical_tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
-            render_tf.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, pitch, 0.0);
-        }
+    let mut yaw = logical_yaw - controller.yaw;
+    let pitch = (render_pitch - controller.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
+    if yaw.abs() > PI {
+        yaw = yaw.rem_euclid(TAU);
     }
+
+    player_tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
+    render_tf.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, pitch, move_towards(render_tilt, controller.tilt, 1.0)); // TODO: speed * dt
+}
+
+fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
+    if (target - current).abs() <= max_delta { return target }
+    current + (target - current).signum() * max_delta
 }

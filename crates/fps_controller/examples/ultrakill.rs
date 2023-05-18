@@ -60,7 +60,7 @@ fn setup_scene(
                 material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
                 ..Default::default()
             },
-            Collider::capsule(Vec3::Y * -0.5, Vec3::Y * 0.5, 0.5),
+            Collider::capsule_y(0.5, 0.5),
             Friction {
                 coefficient: 0.0,
                 combine_rule: CoefficientCombineRule::Min,

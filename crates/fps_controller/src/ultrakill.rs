@@ -1,6 +1,6 @@
 use crate::input::{FpsControllerInput, FpsControllerStages};
 use bevy::{math::Vec3Swizzles, prelude::*};
-use bevy_rapier3d::prelude::*;
+use bevy_rapier3d::{prelude::*, na::OPoint};
 use egui_helper::bevy_inspector_egui::{self, bevy_egui::EguiContext, egui};
 
 #[derive(Default)]
@@ -43,23 +43,11 @@ pub struct FpsController {
     pub crouch_height: f32,
     pub fast_fly_speed: f32,
     pub fly_friction: f32,
-    pub pitch: f32,
-    pub yaw: f32,
     pub ground_tick: u8,
     pub stop_speed: f32,
     pub sensitivity: f32,
     pub enable_input: bool,
     pub step_offset: f32,
-    pub key_forward: KeyCode,
-    pub key_back: KeyCode,
-    pub key_left: KeyCode,
-    pub key_right: KeyCode,
-    pub key_up: KeyCode,
-    pub key_down: KeyCode,
-    pub key_sprint: KeyCode,
-    pub key_jump: KeyCode,
-    pub key_fly: KeyCode,
-    pub key_crouch: KeyCode,
 }
 
 impl Default for FpsController {
@@ -87,23 +75,11 @@ impl Default for FpsController {
             traction_normal_cutoff: 0.7,
             friction_speed_cutoff: 0.1,
             fly_friction: 0.5,
-            pitch: 0.0,
-            yaw: 0.0,
             ground_tick: 0,
             stop_speed: 1.0,
             jump_speed: 10.5,
             step_offset: 0.0,
             enable_input: true,
-            key_forward: KeyCode::W,
-            key_back: KeyCode::S,
-            key_left: KeyCode::A,
-            key_right: KeyCode::D,
-            key_up: KeyCode::E,
-            key_down: KeyCode::Q,
-            key_sprint: KeyCode::LShift,
-            key_jump: KeyCode::Space,
-            key_fly: KeyCode::F,
-            key_crouch: KeyCode::C,
             sensitivity: 0.005,
         }
     }
@@ -140,6 +116,14 @@ pub fn controller_move(
                 0.125,
                 filter,
             );
+
+            // wall intersection check, we use a capsule that is shorter but wider than the player
+            let cast_capsule = Collider::capsule_y(0.2, capsule.radius * 1.05);
+            let filter = QueryFilter::default().exclude_rigid_body(entity).exclude_sensors();
+            let _intersects = physics_context.intersections_with_shape(transform.translation, transform.rotation, &cast_capsule, filter, |entity| {
+                println!("intersected: {:?}", entity);
+                true
+            });
 
             let mut wish_speed = if input.dash.pressed {
                 controller.dash_speed
