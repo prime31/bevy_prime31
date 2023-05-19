@@ -1,5 +1,6 @@
 use crate::input::{FpsControllerInput, FpsControllerStages};
 use bevy::{math::Vec3Swizzles, prelude::*};
+use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::*;
 use egui_helper::bevy_inspector_egui::{self, bevy_egui::EguiContext, egui};
 
@@ -152,6 +153,7 @@ pub struct FpsControllerState {
     // slide
     pub slide_safety_timer: f32,
     pub slide_length: f32,
+    pub standing: bool,
     // jump/wall jump
     pub jump_cooldown: CooldownTimer,
     pub not_jumping_cooldown: CooldownTimer,
@@ -180,6 +182,7 @@ impl FpsControllerState {
 
 pub fn controller_move(
     time: Res<Time>,
+    mut _lines: ResMut<DebugLines>,
     physics_context: Res<RapierContext>,
     mut query: Query<(
         Entity,
@@ -335,6 +338,39 @@ pub fn controller_move(
                 let jump_pos = (transform.translation - closest_pt).normalize();
                 velocity.linvel = Vec3::new(jump_pos.x, 1.0, jump_pos.z) * controller.wall_jump_speed;
             }
+        }
+
+        //if (gc.onGround && activated &&  && !sliding)
+        if input.slide.pressed && on_ground && !state.sliding {
+            state.sliding = true;
+        }
+
+        if !on_ground
+            && !state.sliding
+            && !state.jumping
+            && physics_context
+                .cast_ray(transform.translation, Vec3::NEG_Y, 2.0, false, filter)
+                .is_some()
+        {
+            state.sliding = true;
+        }
+
+        if input.slide.released {
+            state.sliding = false;
+        }
+
+        if state.sliding {
+            state.slide_length += dt;
+
+            if state.slide_safety_timer > 0.0 {
+                state.slide_safety_timer -= dt * 5.0;
+            }
+
+            if on_ground {
+                // camera shake
+            }
+        } else {
+            // handle lerping from crouch to standin
         }
 
         // ***** ***** ***** *****
