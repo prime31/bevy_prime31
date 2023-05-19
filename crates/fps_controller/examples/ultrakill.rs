@@ -16,7 +16,7 @@ use bevy_rapier3d::prelude::*;
 use egui_helper::EguiHelperPlugin;
 use fps_controller::{
     input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
-    ultrakill::{FpsController, UltrakillControllerPlugin},
+    ultrakill::{FpsController, UltrakillControllerPlugin, FpsControllerState},
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -55,7 +55,7 @@ fn setup_scene(
 
     commands
         .spawn((
-            (FpsPlayer, valve_maps::bevy::ValveMapPlayer, RenderLayers::layer(1)),
+            (FpsPlayer, FpsController::default(), FpsControllerState::new(), valve_maps::bevy::ValveMapPlayer, RenderLayers::layer(1)),
             PbrBundle {
                 mesh: meshes.add(shape::Capsule::default().into()),
                 material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
@@ -78,7 +78,6 @@ fn setup_scene(
             AdditionalMassProperties::Mass(1.0),
             GravityScale(0.0),
             Ccd { enabled: true }, // Prevent clipping when going fast
-            FpsController { ..default() },
         ))
         .with_children(|builder| {
             // example of a wall check sensor collider. not sure if this is better than just doing a shape_cast yet.
