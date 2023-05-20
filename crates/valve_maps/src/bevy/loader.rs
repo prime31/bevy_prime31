@@ -171,9 +171,9 @@ async fn load_textures(
 
         // create a material with texture
         let texture_handle = load_context.set_labeled_asset(&file, LoadedAsset::new(texture));
+
         let material = StandardMaterial {
             base_color_texture: Some(texture_handle),
-            alpha_mode: AlphaMode::Opaque,
             ..default()
         };
 

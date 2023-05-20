@@ -91,10 +91,13 @@ impl From<&MeshSurface> for Mesh {
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        mesh.set_indices(Some(Indices::U32(indices)));
         if uvs.len() > 0 {
             mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+            if let Err(e) = mesh.generate_tangents() {
+                println!("error generating tangents: {:?}", e);
+            }
         }
-        mesh.set_indices(Some(Indices::U32(indices)));
 
         mesh
     }
