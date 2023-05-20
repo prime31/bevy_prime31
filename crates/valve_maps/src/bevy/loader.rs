@@ -170,13 +170,13 @@ async fn load_textures(
         );
 
         // create a material with texture
-        let texture_handle =
-            load_context.set_labeled_asset(&format!("textures/{}.png", texture_name), LoadedAsset::new(texture));
+        let texture_handle = load_context.set_labeled_asset(&file, LoadedAsset::new(texture));
         let material = StandardMaterial {
-            base_color_texture: Some(texture_handle.clone()),
+            base_color_texture: Some(texture_handle),
             alpha_mode: AlphaMode::Opaque,
             ..default()
         };
+
         let material_handle =
             load_context.set_labeled_asset(&format!("materials/{}", texture_name), LoadedAsset::new(material));
         materials.insert(texture_name.clone(), material_handle);
