@@ -16,7 +16,7 @@ use bevy_rapier3d::prelude::*;
 use egui_helper::EguiHelperPlugin;
 use fps_controller::{
     input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
-    ultrakill::{FpsController, UltrakillControllerPlugin, FpsControllerState},
+    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin},
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -48,14 +48,23 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
 ) {
-    commands
-        .spawn(Collider::cuboid(140.0, 0.1, 140.0))
-        .insert(Restitution::coefficient(1.0))
-        .insert(TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)));
+    commands.spawn((
+        Name::new("Plane"),
+        Collider::cuboid(140.0, 0.1, 140.0),
+        Restitution::coefficient(1.0),
+        TransformBundle::from(Transform::from_xyz(0.0, -2.0, 0.0)),
+    ));
 
     commands
         .spawn((
-            (FpsPlayer, FpsController::default(), FpsControllerState::new(), valve_maps::bevy::ValveMapPlayer, RenderLayers::layer(1)),
+            (
+                Name::new("Player"),
+                FpsPlayer,
+                FpsController::default(),
+                FpsControllerState::new(),
+                valve_maps::bevy::ValveMapPlayer,
+                RenderLayers::layer(1),
+            ),
             PbrBundle {
                 mesh: meshes.add(shape::Capsule::default().into()),
                 material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
@@ -110,6 +119,7 @@ fn setup_scene(
                     let frame_w = 256;
                     let frame_h = 256 / (1280 / 720);
                     builder.spawn((
+                        Name::new("Camera Two"),
                         Camera3dBundle {
                             transform: Transform::from_xyz(0.0, 0.0, 15.0),
                             camera: Camera {
