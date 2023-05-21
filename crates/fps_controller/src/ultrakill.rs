@@ -1,6 +1,7 @@
 use crate::{
     camera_shake::Shake3d,
     input::{FpsControllerInput, FpsControllerStages},
+    time_controller::TimeScaleModificationEvent,
 };
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_prototype_debug_lines::DebugLines;
@@ -65,9 +66,9 @@ impl Default for FpsController {
             walk_speed: 20.0 * 30.0,
             slide_speed: 35.0 * 30.0,
             dash_speed: 150.0 * 30.0,
-            jump_speed: 10.5, // * 2.6 in UK
+            jump_speed: 10.5,      // * 2.6 in UK
             slide_jump_speed: 8.0, // * 2.0 in UK
-            dash_jump_speed: 8.0, // * 1.5 in UK
+            dash_jump_speed: 8.0,  // * 1.5 in UK
             wall_jump_speed: 15.0,
 
             air_speed_cap: 2.0,
@@ -204,6 +205,7 @@ pub fn controller_move(
         &mut Velocity,
     )>,
     mut shake_q: Query<&mut Shake3d>,
+    mut evt_time_mod: EventWriter<TimeScaleModificationEvent>,
 ) {
     let dt = time.delta_seconds();
     let mut shake = shake_q.single_mut();
@@ -323,7 +325,7 @@ pub fn controller_move(
 
             velocity.linvel.y = 0.0;
             if state.sliding {
-                // TODO: stop_slide
+                // TODO: stop_slide()
                 state.sliding = false;
                 state.slide_ending_this_frame = true;
                 velocity.linvel.y = controller.slide_jump_speed;
@@ -392,7 +394,9 @@ pub fn controller_move(
         }
 
         if input.slide.released {
+            // TODO: stop_slide()
             state.sliding = false;
+            state.slide_ending_this_frame = true;
         }
 
         if state.sliding {
@@ -536,7 +540,10 @@ pub fn controller_move(
             new_velocity += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
             velocity.linvel = new_velocity + input.movement_dir;
         } else {
-            println!("---- dashing, boost left: {}, on_ground: {}, dashed_during_slide: {}", state.boost_left, on_ground, state.slide_ending_this_frame);
+            println!(
+                "---- dashing, boost left: {}, on_ground: {}, slide_ending_this_frame: {}",
+                state.boost_left, on_ground, state.slide_ending_this_frame
+            );
             let mut new_velocity = input.dash_slide_dir * controller.dash_speed * dt;
             new_velocity.y = if state.slide_ending_this_frame { velocity.linvel.y } else { 0.0 };
 
@@ -702,7 +709,7 @@ fn debug_ui(world: &mut World) {
 }
 
 fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
-    if (target - current).abs() <= max_delta {
+    if f32::abs(target - current) <= max_delta {
         return target;
     }
     current + (target - current).signum() * max_delta

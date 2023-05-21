@@ -17,7 +17,7 @@ use egui_helper::EguiHelperPlugin;
 use fps_controller::{
     camera_shake::*,
     input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
-    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin},
+    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin}, time_controller::TimeManagerPlugin,
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -38,6 +38,7 @@ fn main() {
         .add_plugin(FpsInputPlugin)
         .add_plugin(UltrakillControllerPlugin)
         .add_plugin(CameraShakePlugin)
+        .add_plugin(TimeManagerPlugin)
         .add_startup_system(setup_scene)
         .add_systems((print_collision_events, display_text, manage_cursor, zoom_2nd_camera))
         .run();
@@ -154,7 +155,7 @@ fn setup_scene(
             "",
             TextStyle {
                 font: assets.load("fira_mono.ttf"),
-                font_size: 24.0,
+                font_size: 16.0,
                 color: Color::BLACK,
             },
         )
