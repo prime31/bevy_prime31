@@ -153,6 +153,7 @@ pub struct FpsControllerState {
     pub fall_time: f32,
     pub fall_speed: f32,
     pub slam_force: f32,
+    pub slam_storage: bool,
     // slide
     pub pre_slide_delay: f32,
     pub pre_slide_speed: f32,
@@ -167,6 +168,7 @@ pub struct FpsControllerState {
     // dash/dodge
     pub boost_duration: f32,
     pub boost_left: f32,
+    pub dash_storage: f32,
     pub slide_ending_this_frame: bool, // same as slideEnding
 }
 
@@ -281,6 +283,7 @@ pub fn controller_move(
         // falling and hit ground this frame
         if on_ground && state.falling && state.jump_cooldown.is_complete() {
             state.falling = false;
+            state.slam_storage = false;
 
             if state.fall_speed <= -50.0 {
                 shake.trauma = 0.5;
@@ -347,6 +350,7 @@ pub fn controller_move(
         }
 
         if !on_ground && on_wall {
+            // check if movement direction is in the direction of the wall we are on
             if physics_context
                 .cast_ray(transform.translation, input.movement_dir, 1.0, false, filter)
                 .is_some()
@@ -366,6 +370,10 @@ pub fn controller_move(
                 state.not_jumping_cooldown.reset();
                 state.jump_cooldown.reset_with_duration(0.1);
                 state.current_wall_jumps += 1;
+
+                if state.heavy_fall {
+                    state.slam_storage = true;
+                }
 
                 let jump_direction = (transform.translation - Vec3::NEG_Y * 0.5 - closest_pt).normalize();
 
@@ -422,6 +430,7 @@ pub fn controller_move(
                 state.slide_ending_this_frame = true;
 
                 state.boost_left = state.boost_duration;
+                state.dash_storage = 1.0;
                 state.boost = true;
                 state.boost_charge -= 100.0;
 
@@ -522,16 +531,16 @@ pub fn controller_move(
                 state.pre_slide_speed = state.pre_slide_speed.min(3.0);
                 slide_multiplier = state.pre_slide_speed;
                 if on_ground {
-                    state.pre_slide_speed -= dt * state.pre_slide_speed;
-                    state.pre_slide_delay = 0.0;
+                    state.pre_slide_speed -= state.pre_slide_speed * dt;
                 }
+                state.pre_slide_delay = 0.0;
             }
 
             if state.boost_left > 0.0 {
-                // dash storage check
-                // dashStorage = Mathf.MoveTowards(dashStorage, 0f, Time.fixedDeltaTime);
-                // if (dashStorage <= 0f)
-                // 	boostLeft = 0f;
+                state.dash_storage = move_towards(state.dash_storage, 0.0, dt);
+                if state.dash_storage <= 0.0 {
+                    state.boost_left = 0.0;
+                }
             }
 
             // limit horizontal movement while sliding
@@ -715,7 +724,8 @@ fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
     current + (target - current).signum() * max_delta
 }
 
-/// projection motion, get velocity required to launch an object from start to end. has issues...
+/// projectile motion, get velocity required to launch an object from start to end. has issues...doesnt always reach the target.
+/// revisit later for grapple hook thing or just fast teleport
 #[allow(dead_code)]
 fn calc_jump_velocity(start: Vec3, end: Vec3, gravity: f32) -> Vec3 {
     let mut trajectory_height = end.y - start.y - 0.1;
