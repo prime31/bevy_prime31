@@ -225,8 +225,8 @@ async fn load_obj<'a, 'b>(bytes: &'a [u8], load_context: &'a mut LoadContext<'b>
         .map(|(e, cg)| ValveMapEntity::new(e.fields, cg))
         .collect();
 
-    for (i, mesh_surfaces) in mesh_surfaces.iter().enumerate() {
-        for (j, surface) in mesh_surfaces.iter().enumerate() {
+    for (i, mesh_surface) in mesh_surfaces.iter().enumerate() {
+        for (j, surface) in mesh_surface.iter().enumerate() {
             let material = {
                 if let Some(tex_name) = &surface.texture {
                     materials.get(tex_name).unwrap().clone()

@@ -7,6 +7,7 @@ readme = "README.md"
 
 [dependencies]
 bevy = "0.10"
+rand = "*"
 bevy_rapier3d = "0.21.0"
 valve_maps = { path = "../valve_maps" }
 egui_helper = { path = "../egui_helper" }

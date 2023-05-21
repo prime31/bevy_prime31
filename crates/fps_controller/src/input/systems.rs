@@ -61,7 +61,7 @@ pub(crate) fn controller_input(
         )
         .normalize_or_zero();
 
-        input.movement_dir = tf.forward() * input.movement.z + tf.right() * input.movement.x;
+        input.movement_dir = tf.right() * input.movement.x + tf.forward() * input.movement.z;
 
         // store off the dodge/slide direction if starting a dodge/slide
         if input.slide.pressed || input.dash.pressed {

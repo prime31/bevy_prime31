@@ -184,7 +184,6 @@ impl ConvexCollision {
             / self.points.len().max(1) as f32
     }
 
-    /// this also converts from quake to bevy space
     pub fn to_local(&self) -> Vec<Vec3> {
         let origin = self.center();
 

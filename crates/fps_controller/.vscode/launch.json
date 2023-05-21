@@ -1,0 +1,900 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'cameras'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=cameras"
+                ],
+                "filter": {
+                    "name": "cameras",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'dolly'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "dolly",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'nested_driver'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=nested_driver",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "nested_driver",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'nested_driver'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=nested_driver",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "nested_driver",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'orbit'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=orbit",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "orbit",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'orbit'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=orbit",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "orbit",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'follow_cam'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=follow_cam",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "follow_cam",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'follow_cam'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=follow_cam",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "follow_cam",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'flycam'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=flycam",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "flycam",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'flycam'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=flycam",
+                    "--package=dolly"
+                ],
+                "filter": {
+                    "name": "flycam",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'egui_helper'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=egui_helper"
+                ],
+                "filter": {
+                    "name": "egui_helper",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'fps_controller'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "fps_controller",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'mod_fps'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=mod_fps",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "mod_fps",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'mod_fps'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=mod_fps",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "mod_fps",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'ultrakill'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=ultrakill",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "ultrakill",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'ultrakill'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=ultrakill",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "ultrakill",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'character_controller'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=character_controller",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "character_controller",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'character_controller'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=character_controller",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "character_controller",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'tuna'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=tuna",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "tuna",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'tuna'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=tuna",
+                    "--package=fps_controller"
+                ],
+                "filter": {
+                    "name": "tuna",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'valve_maps'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=valve_maps"
+                ],
+                "filter": {
+                    "name": "valve_maps",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'bevy'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=bevy",
+                    "--package=valve_maps"
+                ],
+                "filter": {
+                    "name": "bevy",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'bevy'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=bevy",
+                    "--package=valve_maps"
+                ],
+                "filter": {
+                    "name": "bevy",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'meshes'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "meshes",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'doom_light'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=doom_light",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "doom_light",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'doom_light'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=doom_light",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "doom_light",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'terrain'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=terrain",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "terrain",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'terrain'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=terrain",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "terrain",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'helix'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=helix",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "helix",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'helix'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=helix",
+                    "--package=meshes"
+                ],
+                "filter": {
+                    "name": "helix",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'tween'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "tween",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'sequence'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=sequence",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "sequence",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'sequence'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=sequence",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "sequence",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'parametric'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=parametric",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "parametric",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'parametric'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=parametric",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "parametric",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'transform_rotation'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=transform_rotation",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "transform_rotation",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'transform_rotation'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=transform_rotation",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "transform_rotation",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'transform_translation'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=transform_translation",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "transform_translation",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'transform_translation'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=transform_translation",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "transform_translation",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'test_3d'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=test_3d",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "test_3d",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'test_3d'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=test_3d",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "test_3d",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'menu'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=menu",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "menu",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'menu'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=menu",
+                    "--package=tween"
+                ],
+                "filter": {
+                    "name": "menu",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'p31'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=p31"
+                ],
+                "filter": {
+                    "name": "p31",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'gltf'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=gltf",
+                    "--package=p31"
+                ],
+                "filter": {
+                    "name": "gltf",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'gltf'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=gltf",
+                    "--package=p31"
+                ],
+                "filter": {
+                    "name": "gltf",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'test'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=test",
+                    "--package=p31"
+                ],
+                "filter": {
+                    "name": "test",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'test'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=test",
+                    "--package=p31"
+                ],
+                "filter": {
+                    "name": "test",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

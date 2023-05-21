@@ -15,6 +15,7 @@ use bevy_rapier3d::prelude::*;
 
 use egui_helper::EguiHelperPlugin;
 use fps_controller::{
+    camera_shake::*,
     input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
     ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin},
 };
@@ -36,6 +37,7 @@ fn main() {
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(FpsInputPlugin)
         .add_plugin(UltrakillControllerPlugin)
+        .add_plugin(CameraShakePlugin)
         .add_startup_system(setup_scene)
         .add_systems((print_collision_events, display_text, manage_cursor, zoom_2nd_camera))
         .run();
@@ -101,45 +103,49 @@ fn setup_scene(
             // print!("---- cylinder: {:?}", id);
 
             builder
-                .spawn((
-                    RenderPlayer,
-                    Camera3dBundle {
-                        transform: Transform::from_xyz(0.0, 1.0, 0.0),
-                        projection: Projection::Perspective(PerspectiveProjection {
-                            fov: 100.0_f32.to_radians(),
-                            ..default()
-                        }),
-                        ..default()
-                    },
-                    RenderLayers::default().without(1), // all but our LogicalPlayer
-                ))
+                .spawn((Shake3d::default(), SpatialBundle::default()))
                 .with_children(|builder| {
-                    // Right Camera for 3rd person view trailing a bit and slightly above the player
-                    let win_w = 1280;
-                    let frame_w = 256;
-                    let frame_h = 256 / (1280 / 720);
-                    builder.spawn((
-                        Name::new("Camera Two"),
-                        Camera3dBundle {
-                            transform: Transform::from_xyz(0.0, 0.0, 15.0),
-                            camera: Camera {
-                                order: 1, // after other camera
-                                viewport: Some(Viewport {
-                                    physical_position: UVec2::new(win_w * 2 - frame_w * 2, 0),
-                                    physical_size: UVec2::new(frame_w * 2, frame_h * 2),
+                    builder
+                        .spawn((
+                            RenderPlayer,
+                            Camera3dBundle {
+                                transform: Transform::from_xyz(0.0, 1.0, 0.0),
+                                projection: Projection::Perspective(PerspectiveProjection {
+                                    fov: 100.0_f32.to_radians(),
                                     ..default()
                                 }),
                                 ..default()
                             },
-                            camera_3d: Camera3d {
-                                clear_color: ClearColorConfig::None,
-                                ..default()
-                            },
-                            ..default()
-                        },
-                        UiCameraConfig { show_ui: false },
-                        RenderLayers::default().with(1),
-                    ));
+                            RenderLayers::default().without(1), // all but our LogicalPlayer
+                        ))
+                        .with_children(|builder| {
+                            // Right Camera for 3rd person view trailing a bit and slightly above the player
+                            let win_w = 1280;
+                            let frame_w = 256;
+                            let frame_h = 256 / (1280 / 720);
+                            builder.spawn((
+                                Name::new("Camera Two"),
+                                Camera3dBundle {
+                                    transform: Transform::from_xyz(0.0, 0.0, 15.0),
+                                    camera: Camera {
+                                        order: 1, // after other camera
+                                        viewport: Some(Viewport {
+                                            physical_position: UVec2::new(win_w * 2 - frame_w * 2, 0),
+                                            physical_size: UVec2::new(frame_w * 2, frame_h * 2),
+                                            ..default()
+                                        }),
+                                        ..default()
+                                    },
+                                    camera_3d: Camera3d {
+                                        clear_color: ClearColorConfig::None,
+                                        ..default()
+                                    },
+                                    ..default()
+                                },
+                                UiCameraConfig { show_ui: false },
+                                RenderLayers::default().with(1),
+                            ));
+                        });
                 });
         });
 

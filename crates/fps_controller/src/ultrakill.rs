@@ -1,4 +1,7 @@
-use crate::input::{FpsControllerInput, FpsControllerStages};
+use crate::{
+    camera_shake::Shake3d,
+    input::{FpsControllerInput, FpsControllerStages},
+};
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::*;
@@ -9,7 +12,8 @@ pub struct UltrakillControllerPlugin;
 
 impl Plugin for UltrakillControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(controller_move.in_set(FpsControllerStages::Logic))
+        app.register_type::<FpsControllerState>()
+            .add_system(controller_move.in_set(FpsControllerStages::Logic))
             .add_system(debug_ui.run_if(egui_helper::run_if_egui_enabled));
     }
 }
@@ -21,16 +25,21 @@ pub struct RenderPlayer;
 pub struct FpsController {
     pub radius: f32,
     pub gravity: f32,
+
     pub walk_speed: f32,
     pub slide_speed: f32,
     pub dash_speed: f32,
-    pub forward_speed: f32,
-    pub side_speed: f32,
+    pub jump_speed: f32,
+    pub slide_jump_speed: f32,
+    pub dash_jump_speed: f32,
+    pub wall_jump_speed: f32,
+    pub crouch_speed: f32,
+    pub uncrouch_speed: f32,
+
     pub air_speed_cap: f32,
     pub air_acceleration: f32,
     pub max_air_speed: f32,
     pub acceleration: f32,
-    pub slide_acceleration: f32,
     pub ground_slam_speed: f32,
     pub max_fall_velocity: f32,
     pub friction: f32,
@@ -38,17 +47,9 @@ pub struct FpsController {
     /// which is a value from [-1, 1], is greater than this value, ground movement is applied
     pub traction_normal_cutoff: f32,
     pub friction_speed_cutoff: f32,
-    pub jump_speed: f32,
-    pub wall_jump_speed: f32,
-    pub fly_speed: f32,
-    pub crouch_speed: f32,
-    pub uncrouch_speed: f32,
     pub height: f32,
     pub upright_height: f32,
     pub crouch_height: f32,
-    pub fast_fly_speed: f32,
-    pub fly_friction: f32,
-    pub ground_tick: u8,
     pub stop_speed: f32,
     pub sensitivity: f32,
     pub enable_input: bool,
@@ -59,14 +60,16 @@ impl Default for FpsController {
     fn default() -> Self {
         Self {
             radius: 0.5,
-            fly_speed: 10.0,
-            fast_fly_speed: 30.0,
             gravity: 23.0,
-            walk_speed: 9.0,
-            slide_speed: 25.0,
-            dash_speed: 144.0,
-            forward_speed: 30.0,
-            side_speed: 50.0,
+
+            walk_speed: 20.0 * 30.0,
+            slide_speed: 35.0 * 30.0,
+            dash_speed: 150.0 * 30.0,
+            jump_speed: 10.5, // * 2.6 in UK
+            slide_jump_speed: 8.0, // * 2.0 in UK
+            dash_jump_speed: 8.0, // * 1.5 in UK
+            wall_jump_speed: 15.0,
+
             air_speed_cap: 2.0,
             air_acceleration: 20.0,
             ground_slam_speed: -100.0,
@@ -78,15 +81,10 @@ impl Default for FpsController {
             upright_height: 2.0,
             crouch_height: 1.0,
             acceleration: 10.0,
-            slide_acceleration: 1.0,
             friction: 10.0,
             traction_normal_cutoff: 0.7,
             friction_speed_cutoff: 0.1,
-            fly_friction: 0.5,
-            ground_tick: 0,
             stop_speed: 1.0,
-            jump_speed: 10.5,
-            wall_jump_speed: 10.0,
             step_offset: 0.0,
             enable_input: true,
             sensitivity: 0.005,
@@ -94,7 +92,7 @@ impl Default for FpsController {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Reflect)]
 pub struct CooldownTimer {
     pub elapsed: f32,
     pub duration: f32,
@@ -140,17 +138,23 @@ impl CooldownTimer {
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
 pub struct FpsControllerState {
+    // states
     pub jumping: bool,
     pub sliding: bool,
     pub dashing: bool,
-    pub ground_slamming: bool,
     pub heavy_fall: bool,
     pub falling: bool,
+    pub boost: bool,
+    // live data
+    pub boost_charge: f32,
     pub fall_time: f32,
     pub fall_speed: f32,
+    pub slam_force: f32,
     // slide
+    pub pre_slide_delay: f32,
+    pub pre_slide_speed: f32,
     pub slide_safety_timer: f32,
     pub slide_length: f32,
     pub standing: bool,
@@ -159,13 +163,19 @@ pub struct FpsControllerState {
     pub not_jumping_cooldown: CooldownTimer,
     pub current_wall_jumps: u8,
     pub cling_fade: f32,
+    // dash/dodge
+    pub boost_duration: f32,
+    pub boost_left: f32,
+    pub slide_ending_this_frame: bool, // same as slideEnding
 }
 
 impl FpsControllerState {
     pub fn new() -> Self {
         Self {
+            boost_charge: 300.0,
             jump_cooldown: CooldownTimer::new(0.2),
             not_jumping_cooldown: CooldownTimer::new(0.25),
+            boost_duration: 0.15,
             ..Default::default()
         }
     }
@@ -193,10 +203,10 @@ pub fn controller_move(
         &mut Transform,
         &mut Velocity,
     )>,
-    collider_q: Query<&Collider, Without<FpsController>>,
-    transform_q: Query<&Transform, Without<FpsController>>,
+    mut shake_q: Query<&mut Shake3d>,
 ) {
     let dt = time.delta_seconds();
+    let mut shake = shake_q.single_mut();
 
     for (entity, input, mut state, mut controller, mut collider, mut transform, mut velocity) in query.iter_mut() {
         let Some(capsule) = collider.as_capsule() else { return };
@@ -207,7 +217,7 @@ pub fn controller_move(
         let capsule = capsule.raw;
         let cast_capsule = Collider::capsule(capsule.segment.a.into(), capsule.segment.b.into(), capsule.radius * 0.9);
 
-        let filter = QueryFilter::default().exclude_rigid_body(entity).exclude_sensors();
+        let filter = QueryFilter::only_fixed().exclude_rigid_body(entity).exclude_sensors();
         let ground_cast = physics_context.cast_shape(
             transform.translation,
             transform.rotation,
@@ -220,7 +230,7 @@ pub fn controller_move(
 
         // wall intersection check, we use a cylinder that is shorter but wider than the player
         let cast_cylinder = Collider::cylinder(0.4, 0.6);
-        let filter = QueryFilter::default().exclude_rigid_body(entity).exclude_sensors();
+        let filter = QueryFilter::only_fixed().exclude_rigid_body(entity).exclude_sensors();
         let mut on_wall = false;
         let mut closest_pt = Vec3::splat(f32::MAX);
         let mut closest_dist = f32::MAX;
@@ -230,22 +240,17 @@ pub fn controller_move(
             &cast_cylinder,
             filter,
             |entity| {
-                let collider = collider_q
-                    .get(entity)
-                    .expect("Collider not found for intersected entity");
-                let collider = collider
-                    .as_convex_polyhedron()
-                    .expect("Collider is not a ConvexPolyhedron");
-
                 let player_pos = transform.translation;
-                let collider_pos = transform_q.get(entity).unwrap().translation;
-                collider.points().for_each(|pt| {
-                    let dist = player_pos.distance_squared(collider_pos + pt);
+
+                let predicate = &|e| e == entity;
+                let inner_filter = QueryFilter::default().predicate(&predicate);
+                if let Some(pt_res) = physics_context.project_point(transform.translation, true, inner_filter) {
+                    let dist = player_pos.distance_squared(pt_res.1.point);
                     if dist < closest_dist {
                         closest_dist = dist;
-                        closest_pt = collider_pos + pt;
+                        closest_pt = pt_res.1.point;
                     }
-                });
+                }
 
                 on_wall = true;
                 true
@@ -274,24 +279,39 @@ pub fn controller_move(
         // falling and hit ground this frame
         if on_ground && state.falling && state.jump_cooldown.is_complete() {
             state.falling = false;
+
+            if state.fall_speed <= -50.0 {
+                shake.trauma = 0.5;
+            }
+
             state.fall_speed = 0.0;
             state.heavy_fall = false;
         }
 
-        if !on_ground && input.slide.pressed {
-            // if state.sliding { stop_slide() }
+        let near_ground_check = physics_context.cast_ray(transform.translation, Vec3::NEG_Y, 2.0, false, filter);
 
-            // if (fallTime > 0.5f && !Physics.Raycast(gc.transform.position + base.transform.up, base.transform.up * -1f, out var _, 3f, lmask) && !gc.heavyFall)
-            if state.fall_time > 0.5 && !state.heavy_fall {
+        if !on_ground && input.slide.pressed {
+            // TODO: if state.sliding { stop_slide() }
+            state.sliding = false;
+            state.slide_ending_this_frame = true;
+
+            if state.boost {
+                state.boost = false;
+                state.boost_left = 0.0;
+            }
+
+            if state.fall_time > 0.5 && near_ground_check.is_none() && !state.heavy_fall {
                 velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
                 state.falling = true;
                 state.fall_speed = controller.ground_slam_speed;
                 state.heavy_fall = true;
+                state.slam_force = 1.0;
             }
         }
 
         if state.heavy_fall {
             velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
+            state.slam_force += dt * 5.0;
         }
 
         if input.jump.pressed && !state.falling && on_ground && state.jump_cooldown.is_complete() {
@@ -303,14 +323,25 @@ pub fn controller_move(
 
             velocity.linvel.y = 0.0;
             if state.sliding {
-                // if state.sliding { stop_slide() }
+                // TODO: stop_slide
                 state.sliding = false;
-                velocity.linvel.y = controller.jump_speed * 0.8;
+                state.slide_ending_this_frame = true;
+                velocity.linvel.y = controller.slide_jump_speed;
+            } else if state.boost {
+                if state.boost_charge > 100.0 {
+                    state.boost_charge -= 100.0;
+                    velocity.linvel.y = controller.dash_jump_speed;
+                } else {
+                    velocity.linvel = input.movement_dir * controller.walk_speed * dt;
+                    velocity.linvel.y = 0.0;
+                    shake.trauma = 0.6; // play stamina-failed sound instead
+                }
             } else {
                 velocity.linvel.y = controller.jump_speed;
             }
 
             state.jump_cooldown.reset_with_duration(0.25);
+            state.boost = false;
         }
 
         if !on_ground && on_wall {
@@ -319,12 +350,12 @@ pub fn controller_move(
                 .is_some()
             {
                 if velocity.linvel.y < -1.0 && !state.heavy_fall {
-                    if velocity.linvel.y < -1.0 && !state.heavy_fall {
-                        velocity.linvel.x = velocity.linvel.x.clamp(-1.0, 1.0);
-                        velocity.linvel.y = -2.0 * state.cling_fade;
-                        velocity.linvel.z = velocity.linvel.z.clamp(-1.0, 1.0);
-                        state.cling_fade = move_towards(state.cling_fade, 50.0, dt * 4.0);
-                    }
+                    velocity.linvel.x = velocity.linvel.x.clamp(-1.0, 1.0);
+                    velocity.linvel.y = -2.0 * state.cling_fade;
+                    velocity.linvel.z = velocity.linvel.z.clamp(-1.0, 1.0);
+                    state.cling_fade = move_towards(state.cling_fade, 50.0, dt * 4.0);
+
+                    shake.trauma = 0.25; // replace with sound
                 }
             }
 
@@ -334,25 +365,30 @@ pub fn controller_move(
                 state.jump_cooldown.reset_with_duration(0.1);
                 state.current_wall_jumps += 1;
 
-                velocity.linvel = Vec3::ZERO;
-                let jump_pos = (transform.translation - closest_pt).normalize();
-                velocity.linvel = Vec3::new(jump_pos.x, 1.0, jump_pos.z) * controller.wall_jump_speed;
+                let jump_direction = (transform.translation - Vec3::NEG_Y * 0.5 - closest_pt).normalize();
+
+                velocity.linvel.y = 0.0;
+                velocity.linvel += Vec3::new(jump_direction.x, 1.0, jump_direction.z) * controller.wall_jump_speed;
+
+                state.boost = false;
             }
         }
 
-        //if (gc.onGround && activated &&  && !sliding)
         if input.slide.pressed && on_ground && !state.sliding {
+            // TODO: start_slide()
             state.sliding = true;
+            state.boost = true;
+            state.slide_safety_timer = 1.0;
+            // TODO: move to crouch
         }
 
-        if !on_ground
-            && !state.sliding
-            && !state.jumping
-            && physics_context
-                .cast_ray(transform.translation, Vec3::NEG_Y, 2.0, false, filter)
-                .is_some()
-        {
+        // skip the ground slam if slide is pressed and we are near the ground
+        if !on_ground && !state.sliding && !state.jumping && input.slide.pressed && near_ground_check.is_some() {
+            // TODO: start_slide()
             state.sliding = true;
+            state.boost = true;
+            state.slide_safety_timer = 1.0;
+            // TODO: move to crouch
         }
 
         if input.slide.released {
@@ -362,22 +398,187 @@ pub fn controller_move(
         if state.sliding {
             state.slide_length += dt;
 
+            // TODO: adjust crouching
+
             if state.slide_safety_timer > 0.0 {
                 state.slide_safety_timer -= dt * 5.0;
             }
 
             if on_ground {
-                // camera shake
+                shake.trauma = 0.2;
             }
         } else {
-            // handle lerping from crouch to standin
+            // handle lerping from crouch to standing
+        }
+
+        if input.dash.pressed {
+            if state.boost_charge > 100.0 {
+                // TODO: stop_slide()
+                state.sliding = false;
+                state.slide_ending_this_frame = true;
+
+                state.boost_left = state.boost_duration;
+                state.boost = true;
+                state.boost_charge -= 100.0;
+
+                if state.heavy_fall {
+                    state.fall_speed = 0.0;
+                    state.heavy_fall = false;
+                }
+            } else {
+                // TODO: play sound, dont shake
+                shake.trauma = 0.5;
+            }
+        }
+
+        if state.boost_charge < 300.0 && !state.sliding {
+            state.boost_charge = move_towards(state.boost_charge, 300.0, 70.0 * dt);
+        }
+
+        // FixedUpdate()
+        if state.sliding && state.slide_safety_timer <= 0.0 {
+            let ground_velocity = velocity.linvel.xz();
+            if ground_velocity.length() < 10.0 {
+                state.slide_safety_timer = move_towards(state.slide_safety_timer, -0.1, dt);
+                if state.slide_safety_timer <= -0.1 {
+                    // TODO: stop_slide()
+                    state.sliding = false;
+                    state.slide_ending_this_frame = true;
+                }
+            } else {
+                state.slide_safety_timer = 0.0;
+            }
+        }
+
+        if !state.sliding {
+            if state.heavy_fall {
+                state.pre_slide_delay = 0.2;
+                state.pre_slide_speed = state.slam_force;
+
+                if let Some((_, toi)) = physics_context.cast_shape(
+                    transform.translation,
+                    transform.rotation,
+                    velocity.linvel * Vec3::Y,
+                    &collider,
+                    dt,
+                    filter,
+                ) {
+                    transform.translation.y += velocity.linvel.y * toi.toi;
+                    velocity.linvel = Vec3::ZERO;
+                }
+            } else if !state.boost && state.falling && velocity.linvel.length() / 24.0 > state.pre_slide_speed {
+                state.pre_slide_delay = 0.2;
+                state.pre_slide_speed = velocity.linvel.length() / 24.0;
+            } else {
+                state.pre_slide_delay = move_towards(state.pre_slide_delay, 0.0, dt);
+                if state.pre_slide_delay <= 0.0 {
+                    state.pre_slide_delay = 0.2;
+                    state.pre_slide_speed = velocity.linvel.length() / 24.0;
+                }
+            }
+        }
+
+        // Move()
+        if !state.boost {
+            if on_ground && !state.jumping {
+                state.current_wall_jumps = 0;
+
+                let mut new_velocity = input.movement_dir * controller.walk_speed * dt;
+                new_velocity.y = velocity.linvel.y - controller.gravity * dt;
+                velocity.linvel = velocity.linvel.lerp(new_velocity, 0.25);
+            } else {
+                let wish_velocity = input.movement_dir * controller.walk_speed * dt;
+
+                let mut air_dir = Vec3::ZERO;
+                if (wish_velocity.x > 0.0 && velocity.linvel.x < wish_velocity.x)
+                    || (wish_velocity.x < 0.0 && velocity.linvel.x > wish_velocity.x)
+                {
+                    air_dir.x = wish_velocity.x;
+                }
+
+                if (wish_velocity.z > 0.0 && velocity.linvel.z < wish_velocity.z)
+                    || (wish_velocity.z < 0.0 && velocity.linvel.z > wish_velocity.z)
+                {
+                    air_dir.z = wish_velocity.z;
+                }
+
+                // TODO: this is all wrong. it just keeps increasing velocity with no cap
+                let vel_y = velocity.linvel.y - controller.gravity * dt;
+                velocity.linvel += wish_velocity.normalize_or_zero() * controller.air_acceleration * dt;
+                velocity.linvel.y = vel_y;
+            }
+            return;
+        }
+
+        // Dodge()
+        if state.sliding {
+            println!("---- sliding");
+            let mut slide_multiplier = 1.0;
+            if state.pre_slide_speed > 1.0 {
+                state.pre_slide_speed = state.pre_slide_speed.min(3.0);
+                slide_multiplier = state.pre_slide_speed;
+                if on_ground {
+                    state.pre_slide_speed -= dt * state.pre_slide_speed;
+                    state.pre_slide_delay = 0.0;
+                }
+            }
+
+            if state.boost_left > 0.0 {
+                // dash storage check
+                // dashStorage = Mathf.MoveTowards(dashStorage, 0f, Time.fixedDeltaTime);
+                // if (dashStorage <= 0f)
+                // 	boostLeft = 0f;
+            }
+
+            // limit horizontal movement while sliding
+            let mut new_velocity = input.dash_slide_dir * controller.slide_speed * slide_multiplier * dt;
+            new_velocity.y = velocity.linvel.y;
+            new_velocity += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
+            velocity.linvel = new_velocity + input.movement_dir;
+        } else {
+            println!("---- dashing, boost left: {}, on_ground: {}, dashed_during_slide: {}", state.boost_left, on_ground, state.slide_ending_this_frame);
+            let mut new_velocity = input.dash_slide_dir * controller.dash_speed * dt;
+            new_velocity.y = if state.slide_ending_this_frame { velocity.linvel.y } else { 0.0 };
+
+            if !state.slide_ending_this_frame || (on_ground && !state.jumping) {
+                velocity.linvel = new_velocity;
+                println!("---- ---- first: fixme: why does slide hit this branch?");
+            }
+
+            state.boost_left -= dt;
+            if state.boost_left <= 0.0 {
+                state.boost = false;
+                // in the air and ran out of boost so reduce speed immediately
+                if !on_ground && !state.slide_ending_this_frame {
+                    new_velocity = input.dash_slide_dir * controller.walk_speed * dt;
+                    velocity.linvel = new_velocity;
+                    println!("---- ---- second");
+                }
+            }
+            state.slide_ending_this_frame = false;
+        }
+
+        if true {
+            return;
         }
 
         // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
+        // ***** ***** ***** *****
         // old way
+        // ***** ***** ***** *****
         let mut wish_speed = if input.dash.pressed {
+            // TODO: make a fov_target var and always move towards the value. decrease fov for forward
+            // perhaps it should be Target { default: T, current: T } with reset() and move_toward(value) -> T
             controller.dash_speed
-        } else if input.slide.down {
+        } else if state.sliding {
             controller.slide_speed
         } else {
             controller.walk_speed
@@ -387,7 +588,7 @@ pub fn controller_move(
             let has_traction = Vec3::dot(toi.normal1, Vec3::Y) > controller.traction_normal_cutoff;
 
             // Only apply friction after at least one tick, allows b-hopping without losing speed
-            if controller.ground_tick >= 1 && has_traction {
+            if has_traction {
                 let lateral_speed = velocity.linvel.xz().length();
                 if lateral_speed > controller.friction_speed_cutoff {
                     let control = f32::max(lateral_speed, controller.stop_speed);
@@ -398,40 +599,6 @@ pub fn controller_move(
                 } else {
                     velocity.linvel = Vec3::ZERO;
                 }
-                if controller.ground_tick == 1 {
-                    velocity.linvel.y = -toi.toi;
-                }
-            }
-
-            // start slide
-            if input.slide.pressed {
-                state.sliding = true;
-                state.slide_safety_timer = 1.0;
-                // TODO: `if !crouching` set collider size
-            }
-
-            if input.slide.down {
-                let mut base_dir = input.dash_slide_dir * controller.slide_speed;
-                base_dir.y = velocity.linvel.y;
-                base_dir += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
-                velocity.linvel = base_dir;
-                return;
-                // TODO: still handle jumping
-            }
-
-            // stop slide
-            if input.slide.released {
-                state.sliding = false;
-                state.slide_length = 0.0;
-            }
-
-            if input.dash.pressed {
-                state.dashing = true;
-                let base_dir = input.dash_slide_dir * controller.dash_speed;
-                // if slide_ending { base_dir.y = velocity.linvel.y; }
-                velocity.linvel = base_dir;
-                return;
-                // TODO: still handle jumping
             }
 
             let mut add = acceleration(
@@ -454,18 +621,7 @@ pub fn controller_move(
                     velocity.linvel.y = controller.jump_speed;
                 }
             }
-
-            // Increment ground tick but cap at max value
-            controller.ground_tick = controller.ground_tick.saturating_add(1);
         } else {
-            // ground slam
-            if input.slide.pressed {
-                state.ground_slamming = true;
-                velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
-                return;
-            }
-
-            controller.ground_tick = 0;
             wish_speed = f32::min(wish_speed, controller.air_speed_cap);
 
             let mut add = acceleration(
@@ -500,7 +656,7 @@ pub fn controller_move(
         }
 
         // Step offset
-        if controller.step_offset > f32::EPSILON && controller.ground_tick >= 1 {
+        if controller.step_offset > f32::EPSILON {
             let cast_offset = velocity.linvel.normalize_or_zero() * controller.radius * 1.0625;
             let cast = physics_context.cast_ray_and_get_normal(
                 transform.translation + cast_offset + Vec3::Y * controller.step_offset * 1.0625,
@@ -537,7 +693,7 @@ fn debug_ui(world: &mut World) {
 
     let entity = world.query_filtered::<Entity, With<FpsController>>().single(world);
 
-    egui::Window::new("Hello").show(egui_context.get_mut(), |ui| {
+    egui::Window::new("FPS Player").show(egui_context.get_mut(), |ui| {
         egui::ScrollArea::vertical().show(ui, |ui| {
             bevy_inspector_egui::bevy_inspector::ui_for_entity(world, entity, ui);
             ui.allocate_space(ui.available_size());
@@ -550,4 +706,20 @@ fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
         return target;
     }
     current + (target - current).signum() * max_delta
+}
+
+/// projection motion, get velocity required to launch an object from start to end. has issues...
+#[allow(dead_code)]
+fn calc_jump_velocity(start: Vec3, end: Vec3, gravity: f32) -> Vec3 {
+    let mut trajectory_height = end.y - start.y - 0.1;
+    if trajectory_height < 0.0 {
+        trajectory_height = 2.0
+    };
+    let displacement_y = end.y - start.y;
+    let displacement_xz = Vec3::new(end.x - start.x, 0.0, end.z - start.z);
+    let velocity = Vec3::Y * f32::sqrt(2.0 * gravity * trajectory_height);
+
+    let velocity_xz = displacement_xz / f32::sqrt(2.0 * trajectory_height / gravity)
+        + f32::sqrt(2.0 * (displacement_y - trajectory_height) / gravity);
+    velocity_xz + velocity
 }
