@@ -3,6 +3,8 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
 use egui_helper::EguiHelperState;
 
+use crate::ultrakill::FpsControllerState;
+
 use super::components::*;
 
 const ANGLE_EPSILON: f32 = 0.001953125;
@@ -101,33 +103,34 @@ pub(crate) fn manage_cursor(
 /// syncs the yaw to the FpsPlayer and the pitch to the RenderPlayer
 pub(crate) fn sync_rotation_input(
     egui_state: Res<EguiHelperState>,
-    mut player_query: Query<(&mut Transform, &FpsControllerInput), With<FpsPlayer>>,
+    mut player_query: Query<(&mut Transform, &FpsControllerInput, &FpsControllerState), With<FpsPlayer>>,
     mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+    time: Res<Time>,
 ) {
     if egui_state.wants_input {
         return;
     };
 
-    let Ok((mut player_tf, controller)) = player_query.get_single_mut() else { return };
+    let Ok((mut player_tf, input, controller_state)) = player_query.get_single_mut() else { return };
     let Ok(mut render_tf) = render_query.get_single_mut() else { return };
 
     let (_, render_pitch, render_tilt) = render_tf.rotation.to_euler(EulerRot::YXZ);
     let (logical_yaw, _, _) = player_tf.rotation.to_euler(EulerRot::YXZ);
 
-    let mut yaw = logical_yaw - controller.yaw;
-    let pitch = (render_pitch - controller.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
+    let mut yaw = logical_yaw - input.yaw;
+    let pitch = (render_pitch - input.pitch).clamp(-FRAC_PI_2 + ANGLE_EPSILON, FRAC_PI_2 - ANGLE_EPSILON);
     if yaw.abs() > PI {
         yaw = yaw.rem_euclid(TAU);
     }
 
+    let tilt_multipler: f32 = if controller_state.boost { 5.0 } else { 1.0 };
     player_tf.rotation = Quat::from_euler(EulerRot::YXZ, yaw, 0.0, 0.0);
     render_tf.rotation = Quat::from_euler(
         EulerRot::YXZ,
         0.0,
         pitch,
-        move_towards(render_tilt, controller.tilt, 1.0),
+        move_towards(render_tilt, input.movement.x * -tilt_multipler.to_radians(), time.delta_seconds() * 0.7),
     );
-    // TODO: speed * dt
 }
 
 fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {

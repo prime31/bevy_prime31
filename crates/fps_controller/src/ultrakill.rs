@@ -154,6 +154,8 @@ pub struct FpsControllerState {
     pub fall_speed: f32,
     pub slam_force: f32,
     pub slam_storage: bool,
+    pub super_jump_chance: f32,
+    pub extra_jump_chance: f32,
     // slide
     pub pre_slide_delay: f32,
     pub pre_slide_speed: f32,
@@ -190,6 +192,18 @@ impl FpsControllerState {
         if self.not_jumping_cooldown.finished_this_tick {
             self.jumping = false;
         }
+
+        if self.super_jump_chance > 0.0 {
+            self.super_jump_chance = move_towards(self.super_jump_chance, 0.0, dt);
+            self.extra_jump_chance = 0.15;
+        }
+
+        if self.extra_jump_chance > 0.0 {
+            self.extra_jump_chance = move_towards(self.extra_jump_chance, 0.0, dt);
+            if self.extra_jump_chance <= 0.0 {
+                self.slam_force = 0.0;
+            }
+        }
     }
 }
 
@@ -207,7 +221,7 @@ pub fn controller_move(
         &mut Velocity,
     )>,
     mut shake_q: Query<&mut Shake3d>,
-    mut evt_time_mod: EventWriter<TimeScaleModificationEvent>,
+    mut _evt_time_mod: EventWriter<TimeScaleModificationEvent>,
 ) {
     let dt = time.delta_seconds();
     let mut shake = shake_q.single_mut();
@@ -341,6 +355,10 @@ pub fn controller_move(
                     velocity.linvel.y = 0.0;
                     shake.trauma = 0.6; // play stamina-failed sound instead
                 }
+            } else if state.super_jump_chance > 0.0 && state.extra_jump_chance > 0.0 {
+                let jump_multiplier = if state.slam_force < 5.5 { 0.5 + state.slam_force } else { 12.5 };
+                velocity.linvel.y = controller.jump_speed * jump_multiplier;
+                state.slam_force = 0.0;
             } else {
                 velocity.linvel.y = controller.jump_speed;
             }
@@ -478,6 +496,7 @@ pub fn controller_move(
                 ) {
                     transform.translation.y += velocity.linvel.y * toi.toi;
                     velocity.linvel = Vec3::ZERO;
+                    state.super_jump_chance = 0.085;
                 }
             } else if !state.boost && state.falling && velocity.linvel.length() / 24.0 > state.pre_slide_speed {
                 state.pre_slide_delay = 0.2;
