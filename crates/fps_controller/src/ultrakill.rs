@@ -357,6 +357,7 @@ pub fn controller_move(
                 }
             } else if state.super_jump_chance > 0.0 && state.extra_jump_chance > 0.0 {
                 let jump_multiplier = if state.slam_force < 5.5 { 0.5 + state.slam_force } else { 12.5 };
+                println!("--- Super Jump: slam_force: {}, jump_multiplier: {}", state.slam_force, jump_multiplier);
                 velocity.linvel.y = controller.jump_speed * jump_multiplier;
                 state.slam_force = 0.0;
             } else {

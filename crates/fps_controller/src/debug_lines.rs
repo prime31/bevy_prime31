@@ -1,6 +1,6 @@
 use std::f32::consts::FRAC_PI_2;
 
-use bevy::prelude::Vec3;
+use bevy::prelude::{Vec3, ResMut, Color};
 use bevy_prototype_debug_lines::DebugLines;
 
 pub fn draw_circle_xz(lines: &mut DebugLines) {
@@ -39,4 +39,22 @@ pub fn get_circle_xz_pts(pos: Vec3, radius: f32, resolution: u32) -> Vec<Vec3> {
     }
 
     pts
+}
+
+pub fn thick_line(dl: &mut ResMut<DebugLines>, start: Vec3, end: Vec3, duration: f32) {
+    thick_colored_line(dl, start, end, duration, Color::WHITE);
+}
+
+pub fn thick_colored_line(dl: &mut ResMut<DebugLines>, start: Vec3, end: Vec3, duration: f32, color: Color) {
+    let jitter = 0.0025;
+    let a = Vec3::new(-1.0, 0.0, 1.0) * jitter;
+    let b = Vec3::new(1.0, 0.0, 1.0) * jitter;
+    let c = Vec3::new(-1.0, 0.0, -1.0) * jitter;
+    let d = Vec3::new(-1.0, 0.0, -1.0) * jitter;
+
+    dl.line_colored(start + a, end + a, duration, color);
+    dl.line_colored(start + b, end + b, duration, color);
+    dl.line_colored(start + c, end + c, duration, color);
+    dl.line_colored(start + d, end + d, duration, color);
+    dl.line_colored(start, end, duration, color);
 }
