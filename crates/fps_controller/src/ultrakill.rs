@@ -6,7 +6,10 @@ use crate::{
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_prototype_debug_lines::DebugLines;
 use bevy_rapier3d::prelude::*;
-use egui_helper::bevy_inspector_egui::{self, bevy_egui::EguiContext, egui};
+use egui_helper::bevy_inspector_egui::{
+    bevy_egui::EguiContext,
+    egui::{self, DragValue, Pos2},
+};
 
 #[derive(Default)]
 pub struct UltrakillControllerPlugin;
@@ -73,7 +76,7 @@ impl Default for FpsController {
 
             air_speed_cap: 2.0,
             air_acceleration: 20.0,
-            ground_slam_speed: -100.0,
+            ground_slam_speed: -50.0,
             max_fall_velocity: -100.0,
             max_air_speed: 15.0,
             crouch_speed: 50.0,
@@ -144,7 +147,6 @@ pub struct FpsControllerState {
     // states
     pub jumping: bool,
     pub sliding: bool,
-    pub dashing: bool,
     pub heavy_fall: bool,
     pub falling: bool,
     pub boost: bool,
@@ -313,6 +315,7 @@ pub fn controller_move(
             // TODO: if state.sliding { stop_slide() }
             state.sliding = false;
             state.slide_ending_this_frame = true;
+            state.slide_length = 0.0;
 
             if state.boost {
                 state.boost = false;
@@ -329,7 +332,9 @@ pub fn controller_move(
         }
 
         if state.heavy_fall {
-            velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
+            if !state.slam_storage {
+                velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
+            }
             state.slam_force += dt * 5.0;
         }
 
@@ -345,6 +350,7 @@ pub fn controller_move(
                 // TODO: stop_slide()
                 state.sliding = false;
                 state.slide_ending_this_frame = true;
+                state.slide_length = 0.0;
                 velocity.linvel.y = controller.slide_jump_speed;
             } else if state.boost {
                 if state.boost_charge > 100.0 {
@@ -356,8 +362,11 @@ pub fn controller_move(
                     shake.trauma = 0.6; // play stamina-failed sound instead
                 }
             } else if state.super_jump_chance > 0.0 && state.extra_jump_chance > 0.0 {
-                let jump_multiplier = if state.slam_force < 5.5 { 0.5 + state.slam_force } else { 12.5 };
-                println!("--- Super Jump: slam_force: {}, jump_multiplier: {}", state.slam_force, jump_multiplier);
+                let jump_multiplier = if state.slam_force < 5.5 { 0.5 + state.slam_force } else { 10.0 };
+                println!(
+                    "--- Super Jump: slam_force: {}, jump_multiplier: {}",
+                    state.slam_force, jump_multiplier
+                );
                 velocity.linvel.y = controller.jump_speed * jump_multiplier;
                 state.slam_force = 0.0;
             } else {
@@ -370,11 +379,12 @@ pub fn controller_move(
 
         if !on_ground && on_wall {
             // check if movement direction is in the direction of the wall we are on
-            if physics_context
-                .cast_ray(transform.translation, input.movement_dir, 1.0, false, filter)
-                .is_some()
+            if !state.heavy_fall
+                && physics_context
+                    .cast_ray(transform.translation, input.movement_dir, 1.0, false, filter)
+                    .is_some()
             {
-                if velocity.linvel.y < -1.0 && !state.heavy_fall {
+                if velocity.linvel.y < -1.0 {
                     velocity.linvel.x = velocity.linvel.x.clamp(-1.0, 1.0);
                     velocity.linvel.y = -2.0 * state.cling_fade;
                     velocity.linvel.z = velocity.linvel.z.clamp(-1.0, 1.0);
@@ -424,6 +434,7 @@ pub fn controller_move(
             // TODO: stop_slide()
             state.sliding = false;
             state.slide_ending_this_frame = true;
+            state.slide_length = 0.0;
         }
 
         if state.sliding {
@@ -447,6 +458,7 @@ pub fn controller_move(
                 // TODO: stop_slide()
                 state.sliding = false;
                 state.slide_ending_this_frame = true;
+                state.slide_length = 0.0;
 
                 state.boost_left = state.boost_duration;
                 state.dash_storage = 1.0;
@@ -476,6 +488,7 @@ pub fn controller_move(
                     // TODO: stop_slide()
                     state.sliding = false;
                     state.slide_ending_this_frame = true;
+                    state.slide_length = 0.0;
                 }
             } else {
                 state.slide_safety_timer = 0.0;
@@ -491,7 +504,7 @@ pub fn controller_move(
                     transform.translation,
                     transform.rotation,
                     velocity.linvel * Vec3::Y,
-                    &collider,
+                    &cast_capsule, // smaller radius so we dont hit any walls
                     dt,
                     filter,
                 ) {
@@ -727,14 +740,49 @@ fn debug_ui(world: &mut World) {
         .single(world)
         .clone();
 
-    let entity = world.query_filtered::<Entity, With<FpsController>>().single(world);
+    // let entity = world.query_filtered::<Entity, With<FpsController>>().single(world);
+    // egui::Window::new("FPS Player").show(egui_context.get_mut(), |ui| {
+    //     egui::ScrollArea::vertical().show(ui, |ui| {
+    //         bevy_inspector_egui::bevy_inspector::ui_for_entity(world, entity, ui);
+    //         ui.allocate_space(ui.available_size());
+    //     });
+    // });
 
-    egui::Window::new("FPS Player").show(egui_context.get_mut(), |ui| {
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            bevy_inspector_egui::bevy_inspector::ui_for_entity(world, entity, ui);
-            ui.allocate_space(ui.available_size());
+    let mut state = world.query::<&mut FpsControllerState>().single_mut(world);
+    egui::Window::new("State")
+        .interactable(false)
+        .title_bar(false)
+        .fixed_pos(Pos2::ZERO)
+        .show(egui_context.get_mut(), |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.checkbox(&mut state.jumping, "jumping");
+                ui.checkbox(&mut state.sliding, "sliding");
+                ui.checkbox(&mut state.heavy_fall, "heavy_fall");
+                ui.checkbox(&mut state.falling, "falling");
+                ui.checkbox(&mut state.boost, "boost");
+                ui.spacing();
+                fn float_ui(ui: &mut egui::Ui, value: &mut f32, label: &str) {
+                    ui.horizontal(|ui| {
+                        ui.label(label);
+                        ui.add(DragValue::new(value));
+                    });
+                }
+                float_ui(ui, &mut state.boost_charge, "boost_charge");
+                float_ui(ui, &mut state.fall_time, "fall_time");
+                float_ui(ui, &mut state.fall_speed, "fall_speed");
+                float_ui(ui, &mut state.slam_force, "slam_force");
+                ui.checkbox(&mut state.slam_storage, "slam_storage");
+                float_ui(ui, &mut state.super_jump_chance, "super_jump_chance");
+                float_ui(ui, &mut state.extra_jump_chance, "extra_jump_chance");
+                ui.spacing();
+                ui.label("Slide");
+                float_ui(ui, &mut state.pre_slide_delay, "pre_slide_delay");
+                float_ui(ui, &mut state.pre_slide_speed, "pre_slide_speed");
+                float_ui(ui, &mut state.slide_safety_timer, "slide_safety_timer");
+                float_ui(ui, &mut state.slide_length, "slide_length");
+                ui.checkbox(&mut state.standing, "standing");
+            });
         });
-    });
 }
 
 fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
