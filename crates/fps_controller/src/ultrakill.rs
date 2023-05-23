@@ -92,8 +92,8 @@ impl Default for FpsController {
             coyote_timer_duration: 0.2,
 
             air_speed_cap: 2.0,
-            air_acceleration: 20.0,
-            ground_slam_speed: -50.0,
+            air_acceleration: 50.0,
+            ground_slam_speed: 50.0,
             max_fall_velocity: -100.0,
             max_air_speed: 15.0,
             height: 1.0,
@@ -361,9 +361,9 @@ pub fn controller_move(
             }
 
             if state.fall_time > 0.5 && near_ground_check.is_none() && !state.heavy_fall {
-                velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
+                velocity.linvel = Vec3::new(0.0, -controller.ground_slam_speed, 0.0);
                 state.falling = true;
-                state.fall_speed = controller.ground_slam_speed;
+                state.fall_speed = -controller.ground_slam_speed;
                 state.heavy_fall = true;
                 state.slam_force = 1.0;
             }
@@ -371,7 +371,7 @@ pub fn controller_move(
 
         if state.heavy_fall {
             if !state.slam_storage {
-                velocity.linvel = Vec3::new(0.0, controller.ground_slam_speed, 0.0);
+                velocity.linvel = Vec3::new(0.0, -controller.ground_slam_speed, 0.0);
             }
             state.slam_force += dt * 5.0;
         }
@@ -449,7 +449,7 @@ pub fn controller_move(
                     state.slam_storage = true;
                 }
 
-                let jump_direction = (transform.translation - Vec3::NEG_Y * 0.5 - closest_pt).normalize();
+                let jump_direction = (transform.translation - Vec3::NEG_Y - closest_pt).normalize();
 
                 velocity.linvel.y = 0.0;
                 velocity.linvel += Vec3::new(jump_direction.x, 1.0, jump_direction.z) * controller.wall_jump_speed;
@@ -593,9 +593,9 @@ pub fn controller_move(
                     air_dir.z = wish_velocity.z;
                 }
 
-                // TODO: this is all wrong. it just keeps increasing velocity with no cap
+                // TODO: this can maybe use acceleration method with quake with_vel system?
                 let vel_y = velocity.linvel.y - controller.gravity * dt;
-                velocity.linvel += wish_velocity.normalize_or_zero() * controller.air_acceleration * dt;
+                velocity.linvel += air_dir.normalize_or_zero() * controller.air_acceleration * dt;
                 velocity.linvel.y = vel_y;
             }
             return;
@@ -627,16 +627,11 @@ pub fn controller_move(
             new_velocity += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
             velocity.linvel = new_velocity + input.movement_dir;
         } else {
-            println!(
-                "---- dashing, boost left: {}, on_ground: {}, slide_ending_this_frame: {}",
-                state.boost_left, on_ground, state.slide_ending_this_frame
-            );
             let mut new_velocity = input.dash_slide_dir * controller.dash_speed * dt;
             new_velocity.y = if state.slide_ending_this_frame { velocity.linvel.y } else { 0.0 };
 
-            if !state.slide_ending_this_frame || (on_ground && !state.jumping) {
+            if !state.slide_ending_this_frame && (on_ground && !state.jumping) {
                 velocity.linvel = new_velocity;
-                println!("---- ---- first: fixme: why does slide hit this branch?");
             }
 
             state.boost_left -= dt;
@@ -646,7 +641,6 @@ pub fn controller_move(
                 if !on_ground && !state.slide_ending_this_frame {
                     new_velocity = input.dash_slide_dir * controller.walk_speed * dt;
                     velocity.linvel = new_velocity;
-                    println!("---- ---- second");
                 }
             }
             state.slide_ending_this_frame = false;
