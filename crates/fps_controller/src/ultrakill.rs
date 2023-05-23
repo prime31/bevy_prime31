@@ -34,6 +34,12 @@ pub struct FpsController {
     pub slide_speed: f32,
     pub dash_speed: f32,
     pub jump_speed: f32,
+    /// additional force applied while jumping if jump is still pressed
+    pub jump_down_speed: f32,
+    /// how long to wait before stopping a jump by setting vel.y = 0. A jump_time of 0 will turn off variable height jumps.
+    pub jump_time: f32,
+    /// the amount of force to apply downwards when the jump button is released prior to jump_time expiring.
+    pub jump_stop_force: f32,
     pub slide_jump_speed: f32,
     pub dash_jump_speed: f32,
     pub wall_jump_speed: f32,
@@ -72,7 +78,10 @@ impl Default for FpsController {
             walk_speed: 20.0 * 30.0,
             slide_speed: 35.0 * 30.0,
             dash_speed: 150.0 * 30.0,
-            jump_speed: 10.5,      // * 2.6 in UK
+            jump_speed: 10.5, // * 2.6 in UK
+            jump_down_speed: 0.0,
+            jump_time: 0.0,
+            jump_stop_force: 0.0,
             slide_jump_speed: 8.0, // * 2.0 in UK
             dash_jump_speed: 8.0,  // * 1.5 in UK
             wall_jump_speed: 15.0,
@@ -173,6 +182,7 @@ pub struct FpsControllerState {
     // jump/wall jump
     pub jump_cooldown: CooldownTimer,
     pub not_jumping_cooldown: CooldownTimer,
+    pub jump_timer: f32,
     pub jump_buffer_timer: f32,
     pub coyote_timer: f32,
     pub current_wall_jumps: u8,
@@ -291,8 +301,21 @@ pub fn controller_move(
             state.coyote_timer = controller.coyote_timer_duration;
         } else {
             state.coyote_timer = (state.coyote_timer - dt).max(0.0);
-            state.jump_buffer_timer =
-                if input.jump.pressed { controller.jump_buffer_duration } else { (state.jump_buffer_timer - dt).max(0.0) };
+            state.jump_buffer_timer = if input.jump.pressed {
+                controller.jump_buffer_duration
+            } else {
+                (state.jump_buffer_timer - dt).max(0.0)
+            };
+
+            if state.jump_timer > 0.0 {
+                if input.jump.down {
+                    velocity.linvel.y += controller.jump_down_speed;
+                    state.jump_timer = (state.jump_timer - dt).max(0.0);
+                } else {
+                    state.jump_timer = 0.0;
+                    velocity.linvel.y = -controller.jump_stop_force;
+                }
+            }
 
             if state.fall_time < 1.0 {
                 state.fall_time += dt * 5.0; // TODO: wtf? 5?
@@ -357,6 +380,7 @@ pub fn controller_move(
         let coyote_jump = jump_requested && !on_ground && state.coyote_timer > 0.0 && !on_wall;
         let normal_jump = jump_requested && !state.falling && on_ground;
         if (coyote_jump || normal_jump) && state.jump_cooldown.is_complete() {
+            state.jump_timer = controller.jump_time;
             state.jump_buffer_timer = 0.0;
             state.current_wall_jumps = 0;
             state.cling_fade = 0.0;
@@ -414,6 +438,7 @@ pub fn controller_move(
             }
 
             if jump_requested && state.jump_cooldown.is_complete() && state.current_wall_jumps < 3 {
+                state.jump_timer = controller.jump_time;
                 state.jump_buffer_timer = 0.0;
                 state.jumping = true;
                 state.not_jumping_cooldown.reset();
@@ -806,7 +831,10 @@ fn debug_ui(world: &mut World) {
                 ui.label("Jump");
                 float_ui(ui, &mut state.jump_cooldown.elapsed, "jump_cooldown.elapsed");
                 ui.checkbox(&mut state.jump_cooldown.finished, "jump_cooldown.finished");
-                ui.checkbox(&mut state.not_jumping_cooldown.finished, "not_jumping_cooldown.finished");
+                ui.checkbox(
+                    &mut state.not_jumping_cooldown.finished,
+                    "not_jumping_cooldown.finished",
+                );
                 float_ui(ui, &mut state.jump_buffer_timer, "jump_buffer_timer");
                 float_ui(ui, &mut state.coyote_timer, "coyote_timer");
                 let mut tmp_wall_jumps = state.current_wall_jumps as f32;
