@@ -40,6 +40,9 @@ pub struct FpsController {
     pub crouch_speed: f32,
     pub uncrouch_speed: f32,
 
+    pub jump_buffer_duration: f32,
+    pub coyote_timer_duration: f32,
+
     pub air_speed_cap: f32,
     pub air_acceleration: f32,
     pub max_air_speed: f32,
@@ -73,14 +76,17 @@ impl Default for FpsController {
             slide_jump_speed: 8.0, // * 2.0 in UK
             dash_jump_speed: 8.0,  // * 1.5 in UK
             wall_jump_speed: 15.0,
+            crouch_speed: 50.0,
+            uncrouch_speed: 8.0,
+
+            jump_buffer_duration: 0.10,
+            coyote_timer_duration: 0.2,
 
             air_speed_cap: 2.0,
             air_acceleration: 20.0,
             ground_slam_speed: -50.0,
             max_fall_velocity: -100.0,
             max_air_speed: 15.0,
-            crouch_speed: 50.0,
-            uncrouch_speed: 8.0,
             height: 1.0,
             upright_height: 2.0,
             crouch_height: 1.0,
@@ -167,6 +173,8 @@ pub struct FpsControllerState {
     // jump/wall jump
     pub jump_cooldown: CooldownTimer,
     pub not_jumping_cooldown: CooldownTimer,
+    pub jump_buffer_timer: f32,
+    pub coyote_timer: f32,
     pub current_wall_jumps: u8,
     pub cling_fade: f32,
     // dash/dodge
@@ -280,7 +288,12 @@ pub fn controller_move(
         if on_ground {
             state.fall_time = 0.0;
             state.cling_fade = 0.0;
+            state.coyote_timer = controller.coyote_timer_duration;
         } else {
+            state.coyote_timer = (state.coyote_timer - dt).max(0.0);
+            state.jump_buffer_timer =
+                if input.jump.pressed { controller.jump_buffer_duration } else { (state.jump_buffer_timer - dt).max(0.0) };
+
             if state.fall_time < 1.0 {
                 state.fall_time += dt * 5.0; // TODO: wtf? 5?
                 if state.fall_time > 1.0 {
@@ -291,7 +304,9 @@ pub fn controller_move(
             }
         }
 
-        // clamp max velocity
+        let jump_requested = input.jump.pressed || state.jump_buffer_timer > 0.0;
+
+        // clamp max fall velocity
         if velocity.linvel.y < controller.max_fall_velocity {
             velocity.linvel.y = controller.max_fall_velocity;
         }
@@ -338,7 +353,11 @@ pub fn controller_move(
             state.slam_force += dt * 5.0;
         }
 
-        if input.jump.pressed && !state.falling && on_ground && state.jump_cooldown.is_complete() {
+        // if jump_requested && !state.falling && on_ground && state.jump_cooldown.is_complete() {
+        let coyote_jump = jump_requested && !on_ground && state.coyote_timer > 0.0 && !on_wall;
+        let normal_jump = jump_requested && !state.falling && on_ground;
+        if (coyote_jump || normal_jump) && state.jump_cooldown.is_complete() {
+            state.jump_buffer_timer = 0.0;
             state.current_wall_jumps = 0;
             state.cling_fade = 0.0;
             state.jumping = true;
@@ -394,7 +413,8 @@ pub fn controller_move(
                 }
             }
 
-            if input.jump.pressed && state.jump_cooldown.is_complete() && state.current_wall_jumps < 3 {
+            if jump_requested && state.jump_cooldown.is_complete() && state.current_wall_jumps < 3 {
+                state.jump_buffer_timer = 0.0;
                 state.jumping = true;
                 state.not_jumping_cooldown.reset();
                 state.jump_cooldown.reset_with_duration(0.1);
@@ -666,9 +686,9 @@ pub fn controller_move(
                 let linvel = velocity.linvel;
                 velocity.linvel -= Vec3::dot(linvel, toi.normal1) * toi.normal1;
 
-                if input.jump.pressed {
-                    velocity.linvel.y = controller.jump_speed;
-                }
+                // if input.jump_was_pressed {
+                //     velocity.linvel.y = controller.jump_speed;
+                // }
             }
         } else {
             wish_speed = f32::min(wish_speed, controller.air_speed_cap);
@@ -753,6 +773,7 @@ fn debug_ui(world: &mut World) {
         .interactable(false)
         .title_bar(false)
         .fixed_pos(Pos2::ZERO)
+        .auto_sized()
         .show(egui_context.get_mut(), |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.checkbox(&mut state.jumping, "jumping");
@@ -781,6 +802,16 @@ fn debug_ui(world: &mut World) {
                 float_ui(ui, &mut state.slide_safety_timer, "slide_safety_timer");
                 float_ui(ui, &mut state.slide_length, "slide_length");
                 ui.checkbox(&mut state.standing, "standing");
+                ui.spacing();
+                ui.label("Jump");
+                float_ui(ui, &mut state.jump_cooldown.elapsed, "jump_cooldown.elapsed");
+                ui.checkbox(&mut state.jump_cooldown.finished, "jump_cooldown.finished");
+                ui.checkbox(&mut state.not_jumping_cooldown.finished, "not_jumping_cooldown.finished");
+                float_ui(ui, &mut state.jump_buffer_timer, "jump_buffer_timer");
+                float_ui(ui, &mut state.coyote_timer, "coyote_timer");
+                let mut tmp_wall_jumps = state.current_wall_jumps as f32;
+                float_ui(ui, &mut tmp_wall_jumps, "current_wall_jumps");
+                float_ui(ui, &mut state.cling_fade, "cling_fade");
             });
         });
 }
