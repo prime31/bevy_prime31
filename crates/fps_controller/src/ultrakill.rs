@@ -603,7 +603,6 @@ pub fn controller_move(
 
         // Dodge()
         if state.sliding {
-            println!("---- sliding");
             let mut slide_multiplier = 1.0;
             if state.pre_slide_speed > 1.0 {
                 state.pre_slide_speed = state.pre_slide_speed.min(3.0);
