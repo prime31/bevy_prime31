@@ -13,6 +13,7 @@ valve_maps = { path = "../valve_maps" }
 egui_helper = { path = "../egui_helper" }
 bevy-tnua = { version = "0.2", features = ["rapier_3d"] }
 bevy_prototype_debug_lines = { version = "0.10", features = ["3d"] }
+leafwing-input-manager = "*"
 
 [dev-dependencies]
 cameras = { path = "../cameras" }

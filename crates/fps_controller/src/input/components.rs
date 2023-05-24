@@ -1,10 +1,24 @@
 use bevy::prelude::*;
+use leafwing_input_manager::{Actionlike, prelude::ActionState};
 
 #[derive(Component)]
 pub struct RenderPlayer;
 
 #[derive(Component)]
 pub struct FpsPlayer;
+
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+pub enum InputAction {
+    Move,
+    MouseLook,
+    ControllerLook,
+    Jump,
+    Slide,
+    Dash,
+    Shoot,
+}
+
+pub type InputActions = ActionState<InputAction>;
 
 #[derive(Default, Reflect)]
 pub struct InputState {
@@ -29,29 +43,15 @@ pub struct FpsControllerInput {
 
 #[derive(Component, Reflect)]
 pub struct FpsControllerInputConfig {
-    pub enable_input: bool,
-    pub sensitivity: f32,
-    pub key_forward: KeyCode,
-    pub key_back: KeyCode,
-    pub key_left: KeyCode,
-    pub key_right: KeyCode,
-    pub key_slide: KeyCode,
-    pub key_dash: KeyCode,
-    pub key_jump: KeyCode,
+    pub mouse_sensitivity: f32,
+    pub gamepad_sensitivity: f32,
 }
 
 impl Default for FpsControllerInputConfig {
     fn default() -> Self {
         Self {
-            enable_input: true,
-            sensitivity: 0.7,
-            key_forward: KeyCode::W,
-            key_back: KeyCode::S,
-            key_left: KeyCode::A,
-            key_right: KeyCode::D,
-            key_slide: KeyCode::LControl,
-            key_dash: KeyCode::LShift,
-            key_jump: KeyCode::Space,
+            mouse_sensitivity: 0.7,
+            gamepad_sensitivity: 3.0,
         }
     }
 }

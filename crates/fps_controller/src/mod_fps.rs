@@ -139,10 +139,6 @@ pub fn controller_input(
     mut query: Query<(&mut FpsController, &mut FpsControllerInput)>,
 ) {
     for (mut controller, mut input) in query.iter_mut() {
-        if !controller.enable_input {
-            continue;
-        }
-
         let mut mouse_delta = Vec2::ZERO;
         for mouse_event in mouse_events.iter() {
             mouse_delta += mouse_event.delta;

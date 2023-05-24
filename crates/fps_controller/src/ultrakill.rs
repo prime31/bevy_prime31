@@ -629,7 +629,8 @@ pub fn controller_move(
             let mut new_velocity = input.dash_slide_dir * controller.dash_speed * dt;
             new_velocity.y = if state.slide_ending_this_frame { velocity.linvel.y } else { 0.0 };
 
-            if !state.slide_ending_this_frame && (on_ground && !state.jumping) {
+            // TODO: this results in the last frame of a slide getting a boost
+            if !state.slide_ending_this_frame || (on_ground && !state.jumping) {
                 velocity.linvel = new_velocity;
             }
 

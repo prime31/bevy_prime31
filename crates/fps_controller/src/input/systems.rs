@@ -1,7 +1,8 @@
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
+use bevy::{prelude::*, window::CursorGrabMode};
 use egui_helper::EguiHelperState;
+use leafwing_input_manager::{prelude::*, buttonlike::MouseMotionDirection};
 
 use crate::ultrakill::FpsControllerState;
 
@@ -11,57 +12,93 @@ const ANGLE_EPSILON: f32 = 0.001953125;
 
 pub(crate) fn setup(mut commands: Commands, q: Query<Entity, With<FpsPlayer>>) {
     let Ok(entity) = q.get_single() else { return; };
-    commands
-        .entity(entity)
-        .insert((FpsControllerInput::default(), FpsControllerInputConfig::default()));
+
+    let input_map = InputMap::default()
+        .insert(VirtualDPad::wasd(), InputAction::Move)
+        .insert(DualAxis::left_stick(), InputAction::Move)
+        // look
+        .insert(DualAxis::mouse_motion(), InputAction::MouseLook)
+        .insert(DualAxis::right_stick(), InputAction::ControllerLook)
+        // jump
+        .insert(KeyCode::Space, InputAction::Jump)
+        .insert(GamepadButtonType::South, InputAction::Jump)
+        // slide/slam
+        .insert(KeyCode::LControl, InputAction::Slide)
+        .insert(GamepadButtonType::East, InputAction::Slide)
+        // dash
+        .insert(KeyCode::LShift, InputAction::Dash)
+        .insert(GamepadButtonType::LeftThumb, InputAction::Dash)
+        .insert(GamepadButtonType::West, InputAction::Dash)
+        // shoot
+        .insert(MouseButton::Left, InputAction::Shoot)
+        .insert(GamepadButtonType::RightTrigger2, InputAction::Shoot)
+        .build();
+
+    commands.entity(entity).insert((
+        FpsControllerInput::default(),
+        FpsControllerInputConfig::default(),
+        InputManagerBundle::<InputAction> {
+            action_state: ActionState::default(),
+            input_map,
+        },
+    ));
 }
 
 pub(crate) fn controller_input(
     time: Res<Time>,
-    key_input: Res<Input<KeyCode>>,
     egui_state: Res<EguiHelperState>,
-    mut mouse_events: EventReader<MouseMotion>,
-    mut query: Query<(&Transform, &FpsControllerInputConfig, &mut FpsControllerInput)>,
+    mut query: Query<(
+        &Transform,
+        &FpsControllerInputConfig,
+        &mut FpsControllerInput,
+        &InputActions,
+    )>,
 ) {
-    for (tf, controller, mut input) in query.iter_mut() {
-        if !controller.enable_input {
-            continue;
-        }
+    for (tf, controller, mut input, actions) in query.iter_mut() {
+        input.yaw = 0.0;
+        input.pitch = 0.0;
 
         // ignore mouse input if egui wants input but still gather keyboard input to avoid stuck keys
         if !egui_state.wants_input {
-            let mut mouse_delta: Vec2 = mouse_events
-                .iter()
-                .fold(Vec2::ZERO, |collector, evt| collector + evt.delta);
-            mouse_delta *= controller.sensitivity * time.delta_seconds(); // is this correct calcuation
+            if actions.pressed(InputAction::MouseLook) {
+                let camera_delta = actions.axis_pair(InputAction::MouseLook).unwrap();
+                let camera_delta = camera_delta.xy() * controller.mouse_sensitivity * time.delta_seconds();
 
-            input.pitch = mouse_delta.y;
-            input.yaw = mouse_delta.x;
+                input.yaw = camera_delta.x;
+                input.pitch = camera_delta.y;
+            }
         }
 
-        input.slide.pressed = key_input.just_pressed(controller.key_slide);
-        input.slide.down = key_input.pressed(controller.key_slide);
-        input.slide.released = key_input.just_released(controller.key_slide);
+        if actions.pressed(InputAction::ControllerLook) {
+            let camera_move = actions
+                .clamped_axis_pair(InputAction::ControllerLook)
+                .unwrap()
+                .xy()
+                .normalize();
 
-        input.jump.pressed = key_input.just_pressed(controller.key_jump);
-        input.jump.down = key_input.pressed(controller.key_jump);
-        input.jump.released = key_input.just_released(controller.key_jump);
-
-        input.dash.pressed = key_input.just_pressed(controller.key_dash);
-        input.dash.down = key_input.pressed(controller.key_dash);
-        input.dash.released = key_input.just_released(controller.key_dash);
-
-        fn get_axis(key_input: &Res<Input<KeyCode>>, key_pos: KeyCode, key_neg: KeyCode) -> f32 {
-            let get_pressed = |b| if b { 1.0 } else { 0.0 };
-            get_pressed(key_input.pressed(key_pos)) - get_pressed(key_input.pressed(key_neg))
+            input.yaw = camera_move.x * controller.gamepad_sensitivity * time.delta_seconds();
+            input.pitch = camera_move.y * controller.gamepad_sensitivity * time.delta_seconds();
         }
 
-        input.movement = Vec3::new(
-            get_axis(&key_input, controller.key_right, controller.key_left),
-            0.0,
-            get_axis(&key_input, controller.key_forward, controller.key_back),
-        )
-        .normalize_or_zero();
+        input.slide.pressed = actions.just_pressed(InputAction::Slide);
+        input.slide.down = actions.pressed(InputAction::Slide);
+        input.slide.released = actions.just_released(InputAction::Slide);
+
+        input.jump.pressed = actions.just_pressed(InputAction::Jump);
+        input.jump.down = actions.pressed(InputAction::Jump);
+        input.jump.released = actions.just_released(InputAction::Jump);
+
+        input.dash.pressed = actions.just_pressed(InputAction::Dash);
+        input.dash.down = actions.pressed(InputAction::Dash);
+        input.dash.released = actions.just_released(InputAction::Dash);
+
+        input.movement = if actions.pressed(InputAction::Move) {
+            let axis_pair = actions.clamped_axis_pair(InputAction::Move).unwrap();
+            let axis_pair = axis_pair.xy().normalize_or_zero();
+            Vec3::new(axis_pair.x, 0.0, axis_pair.y)
+        } else {
+            Vec3::ZERO
+        };
 
         input.movement_dir = tf.right() * input.movement.x + tf.forward() * input.movement.z;
 
@@ -72,12 +109,20 @@ pub(crate) fn controller_input(
     }
 }
 
+pub(crate) fn temp_input_test(q: Query<&InputActions, With<FpsPlayer>>) {
+    let Ok(input) = q.get_single() else { return; };
+
+    if input.pressed(InputAction::ControllerLook) {
+        let _camera_pan_vector = input.axis_pair(InputAction::ControllerLook).unwrap();
+        println!("controller cam: {:?}", _camera_pan_vector);
+    }
+}
+
 #[allow(dead_code)]
 pub(crate) fn manage_cursor(
     btn: Res<Input<MouseButton>>,
     key: Res<Input<KeyCode>>,
     mut window_query: Query<&mut Window>,
-    mut controller_query: Query<&mut FpsControllerInputConfig>,
 ) {
     let mut window = window_query.single_mut();
 
@@ -85,18 +130,12 @@ pub(crate) fn manage_cursor(
     if btn.just_pressed(MouseButton::Left) {
         window.cursor.grab_mode = CursorGrabMode::Locked;
         window.cursor.visible = false;
-        for mut controller in &mut controller_query {
-            controller.enable_input = true;
-        }
     }
     // }
 
     if key.just_pressed(KeyCode::Escape) {
         window.cursor.grab_mode = CursorGrabMode::None;
         window.cursor.visible = true;
-        for mut controller in &mut controller_query {
-            controller.enable_input = false;
-        }
     }
 }
 
@@ -129,7 +168,11 @@ pub(crate) fn sync_rotation_input(
         EulerRot::YXZ,
         0.0,
         pitch,
-        move_towards(render_tilt, input.movement.x * -tilt_multipler.to_radians(), time.delta_seconds() * 0.7),
+        move_towards(
+            render_tilt,
+            input.movement.x * -tilt_multipler.to_radians(),
+            time.delta_seconds() * 0.7,
+        ),
     );
 }
 

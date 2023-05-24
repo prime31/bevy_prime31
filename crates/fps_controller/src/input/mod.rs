@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::DebugLinesPlugin;
+use leafwing_input_manager::prelude::InputManagerPlugin;
 
 pub use self::components::*;
 use self::systems::*;
@@ -32,10 +33,11 @@ impl Plugin for FpsInputPlugin {
                 .in_set(FpsControllerSystemSet),
         );
 
-        app.register_type::<FpsControllerInput>()
+        app.add_plugin(InputManagerPlugin::<InputAction>::default())
+            .add_plugin(DebugLinesPlugin::with_depth_test(true))
+            .register_type::<FpsControllerInput>()
             .register_type::<FpsControllerInputConfig>()
             .add_system(setup.on_startup().in_base_set(StartupSet::PostStartup))
-            .add_systems((controller_input, sync_rotation_input).in_set(FpsControllerStages::Input))
-            .add_plugin(DebugLinesPlugin::with_depth_test(true));
+            .add_systems((controller_input, sync_rotation_input, temp_input_test).in_set(FpsControllerStages::Input));
     }
 }
