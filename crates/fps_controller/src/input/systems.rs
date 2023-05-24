@@ -2,7 +2,7 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::{prelude::*, window::CursorGrabMode};
 use egui_helper::EguiHelperState;
-use leafwing_input_manager::{prelude::*, buttonlike::MouseMotionDirection};
+use leafwing_input_manager::prelude::*;
 
 use crate::ultrakill::FpsControllerState;
 
