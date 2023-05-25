@@ -12,6 +12,7 @@ cameras = { path = "crates/cameras" }
 dolly = { path = "crates/dolly" }
 meshes = { path = "crates/meshes" }
 tween = { path = "crates/tween" }
+debug_text = { path = "crates/debug_text" }
 
 [dev-dependencies]
 bevy-inspector-egui = "0.18"
