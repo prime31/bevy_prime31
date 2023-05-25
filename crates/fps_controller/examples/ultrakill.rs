@@ -13,13 +13,18 @@ use bevy::{
 
 use bevy_rapier3d::prelude::*;
 
+use debug_text::DebugTextPlugin;
 use egui_helper::EguiHelperPlugin;
 use fps_controller::{
     camera_shake::*,
     input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
-    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin}, time_controller::TimeManagerPlugin,
+    time_controller::TimeManagerPlugin,
+    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin},
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
+
+#[derive(Component)]
+struct TextMarker;
 
 fn main() {
     App::new()
@@ -33,6 +38,7 @@ fn main() {
         })
         .add_plugin(ValveMapPlugin)
         .add_plugin(EguiHelperPlugin)
+        .add_plugin(DebugTextPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(FpsInputPlugin)
@@ -150,25 +156,26 @@ fn setup_scene(
                 });
         });
 
-    commands.spawn(
+    commands.spawn((
         TextBundle::from_section(
             "",
             TextStyle {
                 font: assets.load("fira_mono.ttf"),
-                font_size: 16.0,
+                font_size: 14.0,
                 color: Color::BLACK,
             },
         )
         .with_style(Style {
             position_type: PositionType::Absolute,
             position: UiRect {
-                top: Val::Px(5.0),
+                bottom: Val::Px(5.0),
                 left: Val::Px(5.0),
                 ..default()
             },
             ..default()
         }),
-    );
+        TextMarker
+    ));
 
     commands.spawn(ValveMapBundle {
         map: asset_server.load("playground.map"),
@@ -210,7 +217,7 @@ fn manage_cursor(
     }
 }
 
-fn display_text(mut controller_query: Query<&Velocity>, mut text_query: Query<&mut Text>) {
+fn display_text(mut controller_query: Query<&Velocity>, mut text_query: Query<&mut Text, With<TextMarker>>) {
     for velocity in &mut controller_query {
         for mut text in &mut text_query {
             text.sections[0].value = format!(

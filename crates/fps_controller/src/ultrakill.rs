@@ -10,6 +10,7 @@ use egui_helper::bevy_inspector_egui::{
     bevy_egui::EguiContext,
     egui::{self, DragValue, Pos2},
 };
+use debug_text::screen_print;
 
 #[derive(Default)]
 pub struct UltrakillControllerPlugin;
@@ -577,6 +578,7 @@ pub fn controller_move(
                 let mut new_velocity = input.movement_dir * controller.walk_speed * dt;
                 new_velocity.y = velocity.linvel.y - controller.gravity * dt;
                 velocity.linvel = velocity.linvel.lerp(new_velocity, 0.25);
+                screen_print!(sec: 0.0, "on_ground && !state.jumping");
             } else {
                 let wish_velocity = input.movement_dir * controller.walk_speed * dt;
 
@@ -597,6 +599,7 @@ pub fn controller_move(
                 let vel_y = velocity.linvel.y - controller.gravity * dt;
                 velocity.linvel += air_dir.normalize_or_zero() * controller.air_acceleration * dt;
                 velocity.linvel.y = vel_y;
+                screen_print!(sec: 0.0, "air");
             }
             return;
         }
@@ -622,7 +625,7 @@ pub fn controller_move(
 
             // limit horizontal movement while sliding
             let mut new_velocity = input.dash_slide_dir * controller.slide_speed * slide_multiplier * dt;
-            new_velocity.y = velocity.linvel.y;
+            new_velocity.y = velocity.linvel.y - controller.gravity * dt;
             new_velocity += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
             velocity.linvel = new_velocity + input.movement_dir;
         } else {
