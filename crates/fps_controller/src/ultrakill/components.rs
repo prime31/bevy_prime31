@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::systems::move_towards;
+use crate::math::move_towards;
 
 #[derive(Component)]
 pub struct RenderPlayer;
@@ -14,11 +14,20 @@ pub struct FpsController {
     pub slide_speed: f32,
     pub dash_speed: f32,
     pub jump_speed: f32,
+    /// additional force applied while jumping if jump is still pressed
+    pub jump_down_speed: f32,
+    /// how long to wait before stopping a jump by setting vel.y = 0. A jump_time of 0 will turn off variable height jumps.
+    pub jump_time: f32,
+    /// the amount of force to apply downwards when the jump button is released prior to jump_time expiring.
+    pub jump_stop_force: f32,
     pub slide_jump_speed: f32,
     pub dash_jump_speed: f32,
     pub wall_jump_speed: f32,
     pub crouch_speed: f32,
     pub uncrouch_speed: f32,
+
+    pub jump_buffer_duration: f32,
+    pub coyote_timer_duration: f32,
 
     pub air_speed_cap: f32,
     pub air_acceleration: f32,
@@ -49,18 +58,24 @@ impl Default for FpsController {
             walk_speed: 20.0 * 30.0,
             slide_speed: 35.0 * 30.0,
             dash_speed: 150.0 * 30.0,
-            jump_speed: 10.5,      // * 2.6 in UK
+            jump_speed: 10.5, // * 2.6 in UK
+            jump_down_speed: 0.0,
+            jump_time: 0.0,
+            jump_stop_force: 0.0,
             slide_jump_speed: 8.0, // * 2.0 in UK
             dash_jump_speed: 8.0,  // * 1.5 in UK
             wall_jump_speed: 15.0,
-
-            air_speed_cap: 2.0,
-            air_acceleration: 20.0,
-            ground_slam_speed: -100.0,
-            max_fall_velocity: -100.0,
-            max_air_speed: 15.0,
             crouch_speed: 50.0,
             uncrouch_speed: 8.0,
+
+            jump_buffer_duration: 0.10,
+            coyote_timer_duration: 0.2,
+
+            air_speed_cap: 2.0,
+            air_acceleration: 50.0,
+            ground_slam_speed: 50.0,
+            max_fall_velocity: -100.0,
+            max_air_speed: 15.0,
             height: 1.0,
             upright_height: 2.0,
             crouch_height: 1.0,
@@ -127,7 +142,6 @@ pub struct FpsControllerState {
     // states
     pub jumping: bool,
     pub sliding: bool,
-    pub dashing: bool,
     pub heavy_fall: bool,
     pub falling: bool,
     pub boost: bool,
@@ -148,6 +162,9 @@ pub struct FpsControllerState {
     // jump/wall jump
     pub jump_cooldown: CooldownTimer,
     pub not_jumping_cooldown: CooldownTimer,
+    pub jump_timer: f32,
+    pub jump_buffer_timer: f32,
+    pub coyote_timer: f32,
     pub current_wall_jumps: u8,
     pub cling_fade: f32,
     // dash/dodge

@@ -14,6 +14,6 @@ impl Plugin for UltrakillControllerPlugin {
     fn build(&self, app: &mut App) {
         app.register_type::<FpsControllerState>()
             .add_system(controller_move.in_set(FpsControllerStages::Logic))
-            .add_system(debug_ui.run_if(egui_helper::run_if_egui_enabled));
+            .add_system(debug_ui);
     }
 }
