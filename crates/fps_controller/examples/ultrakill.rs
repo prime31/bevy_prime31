@@ -19,7 +19,7 @@ use fps_controller::{
     camera_shake::*,
     input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
     time_controller::TimeManagerPlugin,
-    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin},
+    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin}, math::map,
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -235,7 +235,7 @@ fn display_text(mut controller_query: Query<&Velocity>, mut text_query: Query<&m
 fn zoom_2nd_camera(
     egui_state: Res<egui_helper::EguiHelperState>,
     mut ev_scroll: EventReader<MouseWheel>,
-    mut q: Query<&mut Projection, Without<RenderPlayer>>,
+    mut q: Query<(&mut Projection, &mut Transform), Without<RenderPlayer>>,
 ) {
     if egui_state.wants_input {
         return;
@@ -245,8 +245,12 @@ fn zoom_2nd_camera(
         return;
     }
 
-    let Ok(mut proj) = q.get_single_mut() else { return };
+    let Ok((mut proj, mut tf)) = q.get_single_mut() else { return };
     if let Projection::Perspective(proj) = proj.as_mut() {
         proj.fov = (proj.fov + scroll * 0.02).clamp(10.0_f32.to_radians(), 100.0_f32.to_radians());
+
+        // map the lower range of fov to camera height so it tends towards -1.0 (ground) when zoomed in
+        let desired_y = map(proj.fov, 0.17, 0.4, -1.0, 0.0).clamp(-1.0, 0.0);
+        tf.translation.y = desired_y;
     }
 }

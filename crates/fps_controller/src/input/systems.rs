@@ -4,7 +4,7 @@ use bevy::{prelude::*, window::CursorGrabMode};
 use egui_helper::EguiHelperState;
 use leafwing_input_manager::prelude::*;
 
-use crate::ultrakill::FpsControllerState;
+use crate::{ultrakill::FpsControllerState, math::move_towards};
 
 use super::components::*;
 
@@ -143,7 +143,7 @@ pub(crate) fn manage_cursor(
 pub(crate) fn sync_rotation_input(
     egui_state: Res<EguiHelperState>,
     mut player_query: Query<(&mut Transform, &FpsControllerInput, &FpsControllerState), With<FpsPlayer>>,
-    mut render_query: Query<&mut Transform, (With<RenderPlayer>, Without<FpsPlayer>)>,
+    mut render_query: Query<(&mut Transform, &mut Projection), (With<RenderPlayer>, Without<FpsPlayer>)>,
     time: Res<Time>,
 ) {
     if egui_state.wants_input {
@@ -151,7 +151,11 @@ pub(crate) fn sync_rotation_input(
     };
 
     let Ok((mut player_tf, input, controller_state)) = player_query.get_single_mut() else { return };
-    let Ok(mut render_tf) = render_query.get_single_mut() else { return };
+    let Ok((mut render_tf, mut projection)) = render_query.get_single_mut() else { return };
+
+    if let Projection::Perspective(ref mut projection) = *projection {
+        // projection.fov = 0.2;
+    }
 
     let (_, render_pitch, render_tilt) = render_tf.rotation.to_euler(EulerRot::YXZ);
     let (logical_yaw, _, _) = player_tf.rotation.to_euler(EulerRot::YXZ);
@@ -174,11 +178,4 @@ pub(crate) fn sync_rotation_input(
             time.delta_seconds() * 0.7,
         ),
     );
-}
-
-fn move_towards(current: f32, target: f32, max_delta: f32) -> f32 {
-    if (target - current).abs() <= max_delta {
-        return target;
-    }
-    current + (target - current).signum() * max_delta
 }
