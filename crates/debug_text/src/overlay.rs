@@ -97,10 +97,10 @@ lazy_static! {
 #[macro_export]
 macro_rules! screen_print {
     (push, col: $color:expr, $text:expr $(, $fmt_args:expr)*) => {
-        screen_print!(@impl push, sec: 2.0, col: Some($color), $text $(, $fmt_args)*);
+        screen_print!(@impl push, sec: 0.0, col: Some($color), $text $(, $fmt_args)*);
     };
     (col: $color:expr, $text:expr $(, $fmt_args:expr)*) => {
-        screen_print!(@impl sec: 2.0, col: Some($color), $text $(, $fmt_args)*);
+        screen_print!(@impl sec: 0.0, col: Some($color), $text $(, $fmt_args)*);
     };
     (push, sec: $timeout:expr, col: $color:expr, $text:expr $(, $fmt_args:expr)*) => {
         screen_print!(@impl push, sec: $timeout, col: Some($color), $text $(, $fmt_args)*);
@@ -115,10 +115,10 @@ macro_rules! screen_print {
         screen_print!(@impl sec: $timeout, col: None, $text $(, $fmt_args)*);
     };
     (push, $text:expr $(, $fmt_args:expr)*) => {
-        screen_print!(@impl push, sec: 2.0, col: None, $text $(, $fmt_args)*);
+        screen_print!(@impl push, sec: 0.0, col: None, $text $(, $fmt_args)*);
     };
     ($text:expr $(, $fmt_args:expr)*) => {
-        screen_print!(@impl sec: 7.0, col: None, $text $(, $fmt_args)*);
+        screen_print!(@impl sec: 0.0, col: None, $text $(, $fmt_args)*);
     };
     (@impl sec: $timeout:expr, col: $color:expr, $text:expr $(, $fmt_args:expr)*) => {{
         use $crate::{InvocationSiteKey, COMMAND_CHANNELS};
