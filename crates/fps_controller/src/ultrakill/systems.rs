@@ -1,4 +1,9 @@
-use crate::{camera_shake::Shake3d, input::FpsControllerInput, time_controller::TimeScaleModificationEvent, utils::math::move_towards};
+use std::collections::VecDeque;
+
+use crate::{
+    camera_shake::Shake3d, input::FpsControllerInput, time_controller::TimeScaleModificationEvent,
+    utils::math::move_towards,
+};
 use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 use bevy_prototype_debug_lines::DebugLines;
@@ -134,10 +139,7 @@ pub fn controller_move(
         let near_ground_check = physics_context.cast_ray(transform.translation, Vec3::NEG_Y, 2.0, false, filter);
 
         if !on_ground && input.slide.pressed {
-            // TODO: if state.sliding { stop_slide() }
-            state.sliding = false;
-            state.slide_ending_this_frame = true;
-            state.slide_length = 0.0;
+            state.stop_sliding();
 
             if state.boost {
                 state.boost = false;
@@ -174,10 +176,7 @@ pub fn controller_move(
 
             velocity.linvel.y = 0.0;
             if state.sliding {
-                // TODO: stop_slide()
-                state.sliding = false;
-                state.slide_ending_this_frame = true;
-                state.slide_length = 0.0;
+                state.stop_sliding();
                 velocity.linvel.y = controller.slide_jump_speed;
             } else if state.boost {
                 if state.boost_charge > 100.0 {
@@ -243,27 +242,18 @@ pub fn controller_move(
         }
 
         if input.slide.pressed && on_ground && !state.sliding {
-            // TODO: start_slide()
-            state.sliding = true;
-            state.boost = true;
-            state.slide_safety_timer = 1.0;
+            state.start_sliding();
             // TODO: move to crouch
         }
 
         // skip the ground slam if slide is pressed and we are near the ground
         if !on_ground && !state.sliding && !state.jumping && input.slide.pressed && near_ground_check.is_some() {
-            // TODO: start_slide()
-            state.sliding = true;
-            state.boost = true;
-            state.slide_safety_timer = 1.0;
+            state.start_sliding();
             // TODO: move to crouch
         }
 
         if input.slide.released {
-            // TODO: stop_slide()
-            state.sliding = false;
-            state.slide_ending_this_frame = true;
-            state.slide_length = 0.0;
+            state.stop_sliding();
         }
 
         if state.sliding {
@@ -284,10 +274,7 @@ pub fn controller_move(
 
         if input.dash.pressed {
             if state.boost_charge > 100.0 {
-                // TODO: stop_slide()
-                state.sliding = false;
-                state.slide_ending_this_frame = true;
-                state.slide_length = 0.0;
+                state.stop_sliding();
 
                 state.boost_left = state.boost_duration;
                 state.dash_storage = 1.0;
@@ -314,10 +301,7 @@ pub fn controller_move(
             if ground_velocity.length() < 10.0 {
                 state.slide_safety_timer = move_towards(state.slide_safety_timer, -0.1, dt);
                 if state.slide_safety_timer <= -0.1 {
-                    // TODO: stop_slide()
-                    state.sliding = false;
-                    state.slide_ending_this_frame = true;
-                    state.slide_length = 0.0;
+                    state.stop_sliding();
                 }
             } else {
                 state.slide_safety_timer = 0.0;
@@ -362,6 +346,7 @@ pub fn controller_move(
                 new_velocity.y = velocity.linvel.y - controller.gravity * dt;
                 velocity.linvel = velocity.linvel.lerp(new_velocity, 0.25);
                 screen_print!(sec: 0.0, "on_ground && !state.jumping");
+                screen_print!(sec: 0.0, "walking. vel: {:06.3}", new_velocity.xz().length());
             } else {
                 let wish_velocity = input.movement_dir * controller.walk_speed * dt;
 
@@ -410,7 +395,7 @@ pub fn controller_move(
             let mut new_velocity = input.dash_slide_dir * controller.slide_speed * slide_multiplier * dt;
             new_velocity.y = velocity.linvel.y - controller.gravity * dt;
             new_velocity += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
-            velocity.linvel = new_velocity + input.movement_dir;
+            velocity.linvel = velocity.linvel.lerp(new_velocity, 0.4);
         } else {
             let mut new_velocity = input.dash_slide_dir * controller.dash_speed * dt;
             new_velocity.y = if state.slide_ending_this_frame { velocity.linvel.y } else { 0.0 };
@@ -559,20 +544,29 @@ fn acceleration(wish_direction: Vec3, wish_speed: f32, acceleration: f32, veloci
     wish_direction * acceleration_speed
 }
 
-pub fn debug_ui(world: &mut World,  mut enabled: Local<bool>) {
+pub fn debug_ui(world: &mut World, mut enabled: Local<bool>, mut velocity_data: Local<VecDeque<(f32, f32)>>) {
     let keys = world.get_resource::<Input<KeyCode>>().unwrap();
     if keys.just_pressed(KeyCode::Key1) {
         *enabled = !*enabled;
+        *velocity_data = VecDeque::new();
     }
 
-    if !*enabled { return; }
+    if !*enabled {
+        return;
+    }
 
     let mut egui_context = world
         .query_filtered::<&mut EguiContext, With<bevy::window::PrimaryWindow>>()
         .single(world)
         .clone();
 
-    let mut state = world.query::<&mut FpsControllerState>().single_mut(world);
+    // manage storing velocities for the graph and trimming the data
+    let (mut state, velocity) = world.query::<(&mut FpsControllerState, &Velocity)>().single_mut(world);
+    velocity_data.push_back((velocity.linvel.length(), velocity.linvel.xz().length()));
+    if velocity_data.len() > 200 {
+        velocity_data.pop_front();
+    }
+
     egui::Window::new("State")
         .interactable(false)
         .title_bar(false)
@@ -620,6 +614,27 @@ pub fn debug_ui(world: &mut World,  mut enabled: Local<bool>) {
                 let mut tmp_wall_jumps = state.current_wall_jumps as f32;
                 float_ui(ui, &mut tmp_wall_jumps, "current_wall_jumps");
                 float_ui(ui, &mut state.cling_fade, "cling_fade");
+
+                let plot = egui::plot::Plot::new("plot_id")
+                    .legend(egui::plot::Legend::default().position(egui::plot::Corner::LeftBottom))
+                    .width(200.0)
+                    .include_y(0.0)
+                    .include_y(25.0)
+                    .show_axes([false, true]);
+
+                plot.show(ui, |plot_ui| {
+                    let vel_xyz = egui::plot::Line::new(egui::plot::PlotPoints::from_ys_f32(
+                        &velocity_data.iter().map(|i| i.0).collect::<Vec<_>>(),
+                    ))
+                    .name("Velocity");
+                    let vel_xz = egui::plot::Line::new(egui::plot::PlotPoints::from_ys_f32(
+                        &velocity_data.iter().map(|i| i.1).collect::<Vec<_>>(),
+                    ))
+                    .name("XZ Velocity");
+
+                    plot_ui.line(vel_xyz);
+                    plot_ui.line(vel_xz);
+                })
             });
         });
 }

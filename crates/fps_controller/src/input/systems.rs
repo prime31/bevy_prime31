@@ -100,11 +100,11 @@ pub(crate) fn controller_input(
             Vec3::ZERO
         };
 
-        input.movement_dir = tf.right() * input.movement.x + tf.forward() * input.movement.z;
+        input.movement_dir = (tf.right() * input.movement.x + tf.forward() * input.movement.z).normalize_or_zero();
 
         // store off the dodge/slide direction if starting a dodge/slide
         if input.slide.pressed || input.dash.pressed {
-            input.dash_slide_dir = if input.movement == Vec3::ZERO { tf.forward() } else { input.movement_dir };
+            input.dash_slide_dir = if input.movement == Vec3::ZERO { tf.forward() } else { input.movement_dir.normalize_or_zero() };
         }
     }
 }

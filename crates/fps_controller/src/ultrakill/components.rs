@@ -205,4 +205,16 @@ impl FpsControllerState {
             }
         }
     }
+
+    pub fn start_sliding(&mut self) {
+        self.sliding = true;
+        self.boost = true;
+        self.slide_safety_timer = 1.0;
+    }
+
+    pub fn stop_sliding(&mut self) {
+        self.sliding = false;
+        self.slide_ending_this_frame = true;
+        self.slide_length = 0.0;
+    }
 }
