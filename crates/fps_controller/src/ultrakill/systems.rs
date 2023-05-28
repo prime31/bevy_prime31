@@ -70,7 +70,7 @@ pub fn controller_move(
                 let player_pos = transform.translation;
 
                 let predicate = &|e| e == entity;
-                let inner_filter = QueryFilter::default().predicate(&predicate);
+                let inner_filter = QueryFilter::only_fixed().predicate(&predicate);
                 if let Some(pt_res) = physics_context.project_point(transform.translation, true, inner_filter) {
                     let dist = player_pos.distance_squared(pt_res.1.point);
                     if dist < closest_dist {
@@ -392,11 +392,40 @@ pub fn controller_move(
             }
 
             // limit horizontal movement while sliding
+            // TODO: remove all delta time multiplications with velocities
             let mut new_velocity = input.dash_slide_dir * controller.slide_speed * slide_multiplier * dt;
             new_velocity.y = velocity.linvel.y - controller.gravity * dt;
             new_velocity += (input.movement.x * transform.right()).clamp_length_max(1.0) * 5.0;
             velocity.linvel = velocity.linvel.lerp(new_velocity, 0.4);
+            velocity.linvel = new_velocity;
         } else {
+            if !on_ground && on_wall {
+                // fire off a ray in the direction of the closest wall point we are touching
+                if let Some(ray_check) = physics_context.cast_ray_and_get_normal(
+                    transform.translation,
+                    (closest_pt - transform.translation).normalize_or_zero(), // input.dash_slide_dir,
+                    1.0,
+                    false,
+                    filter,
+                ) {
+
+                    // ensure we didnt dash head first into the wall and that our velocity is in the direction of the surface
+                    let dot = Vec3::dot(-input.dash_slide_dir, ray_check.1.normal);
+                    if dot < 0.9 {
+                        let surface_parallel = transform.forward()
+                            - ray_check.1.normal * Vec3::dot(transform.forward(), ray_check.1.normal);
+                        let surface_parallel = surface_parallel.normalize_or_zero();
+
+                        let surface_move_dot = Vec3::dot(input.dash_slide_dir, surface_parallel);
+                        if surface_move_dot > 0.0 {
+                            println!("--- WALL RUN:  dot {:?}, dot2: {}", dot, surface_move_dot);
+                            state.boost_left += dt;
+                            // input.dash_slide_dir = surface_parallel;
+                        }
+                    }
+                }
+            }
+
             let mut new_velocity = input.dash_slide_dir * controller.dash_speed * dt;
             new_velocity.y = if state.slide_ending_this_frame { velocity.linvel.y } else { 0.0 };
 
