@@ -101,13 +101,16 @@ pub fn controller_move(
                     velocity.linvel.y += controller.jump_down_speed;
                     state.jump_timer = (state.jump_timer - dt).max(0.0);
                 } else {
+                    // if we released jump before min_jump_duration while still moving upward apply jump_stop_force
+                    if controller.jump_time - state.jump_timer > controller.min_jump_duration && velocity.linvel.y > 0.0 {
+                        velocity.linvel.y = -controller.jump_stop_force;
+                    }
                     state.jump_timer = 0.0;
-                    velocity.linvel.y = -controller.jump_stop_force;
                 }
             }
 
             if state.fall_time < 1.0 {
-                state.fall_time += dt * 5.0; // TODO: wtf? 5?
+                state.fall_time += dt * 5.0; // TODO: wtf? dt * 5?
                 if state.fall_time > 1.0 {
                     state.falling = true;
                 }
@@ -408,7 +411,6 @@ pub fn controller_move(
                     false,
                     filter,
                 ) {
-
                     // ensure we didnt dash head first into the wall and that our velocity is in the direction of the surface
                     let dot = Vec3::dot(-input.dash_slide_dir, ray_check.1.normal);
                     if dot < 0.9 {

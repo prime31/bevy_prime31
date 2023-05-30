@@ -13,12 +13,15 @@ pub struct FpsController {
     pub walk_speed: f32,
     pub slide_speed: f32,
     pub dash_speed: f32,
+    /// The amount of force to apply on the first frame when a jump begins
     pub jump_speed: f32,
-    /// additional force applied while jumping if jump is still pressed
+    /// additional force applied while jumping if jump is still pressed and jump_time > 0
     pub jump_down_speed: f32,
     /// how long to wait before stopping a jump by setting vel.y = 0. A jump_time of 0 will turn off variable height jumps.
     pub jump_time: f32,
-    /// the amount of force to apply downwards when the jump button is released prior to jump_time expiring.
+    /// if jump_time > 0, player is moving upward and the jump button is released before min_jump_duration has elapsed jump_stop_force will be applied
+    pub min_jump_duration: f32,
+    /// the amount of force to apply downwards when the jump button is released prior to jump_time expiring
     pub jump_stop_force: f32,
     pub slide_jump_speed: f32,
     pub dash_jump_speed: f32,
@@ -59,9 +62,10 @@ impl Default for FpsController {
             slide_speed: 35.0 * 30.0,
             dash_speed: 150.0 * 30.0,
             jump_speed: 10.5, // * 2.6 in UK
-            jump_down_speed: 0.0,
-            jump_time: 0.0,
-            jump_stop_force: 0.0,
+            jump_down_speed: 0.2,
+            jump_time: 0.5,
+            min_jump_duration: 0.2,
+            jump_stop_force: 3.0,
             slide_jump_speed: 8.0, // * 2.0 in UK
             dash_jump_speed: 8.0,  // * 1.5 in UK
             wall_jump_speed: 15.0,
