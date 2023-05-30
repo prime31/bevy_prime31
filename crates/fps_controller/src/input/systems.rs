@@ -92,6 +92,10 @@ pub(crate) fn controller_input(
         input.dash.down = actions.pressed(InputAction::Dash);
         input.dash.released = actions.just_released(InputAction::Dash);
 
+        input.shoot.pressed = actions.just_pressed(InputAction::Shoot);
+        input.shoot.down = actions.pressed(InputAction::Shoot);
+        input.shoot.released = actions.just_released(InputAction::Shoot);
+
         input.movement = if actions.pressed(InputAction::Move) {
             let axis_pair = actions.clamped_axis_pair(InputAction::Move).unwrap();
             let axis_pair = axis_pair.xy().normalize_or_zero();

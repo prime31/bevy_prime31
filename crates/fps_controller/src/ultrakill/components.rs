@@ -150,6 +150,7 @@ pub struct FpsControllerState {
     pub heavy_fall: bool,
     pub falling: bool,
     pub boost: bool,
+    pub grappling: bool,
     // live data
     pub boost_charge: f32,
     pub fall_time: f32,
@@ -176,7 +177,9 @@ pub struct FpsControllerState {
     pub boost_duration: f32,
     pub boost_left: f32,
     pub dash_storage: f32,
-    pub slide_ending_this_frame: bool, // same as slideEnding
+    pub slide_ending_this_frame: bool,
+    // grapple
+    pub grapple_target: Vec3,
 }
 
 impl FpsControllerState {
