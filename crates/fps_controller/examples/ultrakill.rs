@@ -17,9 +17,9 @@ use debug_text::DebugTextPlugin;
 use egui_helper::EguiHelperPlugin;
 use fps_controller::{
     camera_shake::*,
-    input::{FpsInputPlugin, FpsPlayer, RenderPlayer},
+    input::{FpsInputPlugin, RenderPlayer},
     time_controller::TimeManagerPlugin,
-    ultrakill::{FpsController, FpsControllerState, UltrakillControllerPlugin}, math::map,
+    ultrakill::{UltrakillControllerPlugin, FpsControllerBundle}, math::map,
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -68,9 +68,7 @@ fn setup_scene(
         .spawn((
             (
                 Name::new("Player"),
-                FpsPlayer,
-                FpsController::default(),
-                FpsControllerState::new(),
+                FpsControllerBundle::default(),
                 valve_maps::bevy::ValveMapPlayer,
                 RenderLayers::layer(1),
             ),
@@ -78,24 +76,7 @@ fn setup_scene(
                 mesh: meshes.add(shape::Capsule::default().into()),
                 material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
                 ..Default::default()
-            },
-            Collider::capsule_y(0.5, 0.5),
-            Friction {
-                coefficient: 0.0,
-                combine_rule: CoefficientCombineRule::Min,
-            },
-            Restitution {
-                coefficient: 0.0,
-                combine_rule: CoefficientCombineRule::Min,
-            },
-            ActiveEvents::COLLISION_EVENTS,
-            Velocity::zero(),
-            RigidBody::Dynamic,
-            Sleeping::disabled(),
-            LockedAxes::ROTATION_LOCKED,
-            AdditionalMassProperties::Mass(1.0),
-            GravityScale(0.0),
-            Ccd { enabled: true }, // Prevent clipping when going fast
+            }
         ))
         .with_children(|builder| {
             // example of a wall check sensor collider. not sure if this is better than just doing a shape_cast yet.

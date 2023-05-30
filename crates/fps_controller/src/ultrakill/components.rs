@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::*;
 
-use crate::math::move_towards;
+use crate::{input::FpsPlayer, math::move_towards};
 
 #[derive(Component)]
 pub struct RenderPlayer;
@@ -222,3 +223,69 @@ impl FpsControllerState {
         self.slide_length = 0.0;
     }
 }
+
+/// helper bundles
+#[derive(Bundle)]
+pub struct FpsControllerPhysicsBundle {
+    pub collider: Collider,
+    pub friction: Friction,
+    pub restitution: Restitution,
+    pub active_events: ActiveEvents,
+    pub velocity: Velocity,
+    pub rigidbody: RigidBody,
+    pub sleeping: Sleeping,
+    pub locked_axes: LockedAxes,
+    pub additional_mass_properties: AdditionalMassProperties,
+    pub gravity: GravityScale,
+    pub ccd: Ccd,
+}
+
+impl Default for FpsControllerPhysicsBundle {
+    fn default() -> Self {
+        Self {
+            collider: Collider::capsule_y(0.5, 0.5),
+            friction: Friction {
+                coefficient: 0.0,
+                combine_rule: CoefficientCombineRule::Min,
+            },
+            restitution: Restitution {
+                coefficient: 0.0,
+                combine_rule: CoefficientCombineRule::Min,
+            },
+            active_events: ActiveEvents::COLLISION_EVENTS,
+            velocity: Velocity::zero(),
+            rigidbody: RigidBody::Dynamic,
+            sleeping: Sleeping::disabled(),
+            locked_axes: LockedAxes::ROTATION_LOCKED,
+            additional_mass_properties: AdditionalMassProperties::Mass(1.0),
+            gravity: GravityScale(0.0),
+            ccd: Ccd { enabled: true }, // Prevent clipping when going fast
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct FpsControllerBundle {
+    #[bundle]
+    pub physics: FpsControllerPhysicsBundle,
+    pub fps_player: FpsPlayer,
+    pub fps_controller: FpsController,
+    pub fps_controller_state: FpsControllerState,
+}
+
+impl Default for FpsControllerBundle {
+    fn default() -> Self {
+        Self {
+            physics: Default::default(),
+            fps_player: FpsPlayer,
+            fps_controller: default(),
+            fps_controller_state: FpsControllerState::new(),
+        }
+    }
+}
+
+//     (
+//         valve_maps::bevy::ValveMapPlayer,
+//         RenderLayers::layer(1),
+//     ),
+
