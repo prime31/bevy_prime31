@@ -14,6 +14,8 @@ pub struct FpsController {
     pub walk_speed: f32,
     pub slide_speed: f32,
     pub dash_speed: f32,
+    pub wall_run_speed: f32,
+    pub grapple_speed: f32,
     /// The amount of force to apply on the first frame when a jump begins
     pub jump_speed: f32,
     /// additional force applied while jumping if jump is still pressed and jump_time > 0
@@ -62,6 +64,8 @@ impl Default for FpsController {
             walk_speed: 20.0 * 30.0,
             slide_speed: 35.0 * 30.0,
             dash_speed: 150.0 * 30.0,
+            wall_run_speed: 100.0 * 30.0,
+            grapple_speed: 100.0 * 10.0,
             jump_speed: 10.5, // * 2.6 in UK
             jump_down_speed: 0.2,
             jump_time: 0.5,

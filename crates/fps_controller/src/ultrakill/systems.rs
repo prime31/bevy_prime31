@@ -560,6 +560,7 @@ pub fn controller_move(
     let crouch_height = controller.crouch_height;
     let upright_height = controller.upright_height;
 
+    // TODO: do crouching with Ryan Fleury thing from Notes.app and possibly fov as well. make custom stuct that always "moves towards" some value
     let crouch_speed = if input.dash.down { -controller.crouch_speed } else { controller.uncrouch_speed };
     controller.height += dt * crouch_speed;
     controller.height = controller.height.clamp(crouch_height, upright_height);
