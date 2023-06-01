@@ -1,0 +1,13 @@
+[package]
+name = "volumetric_scattering"
+version = "0.0.1"
+edition = "2021"
+description = ""
+readme = "README.md"
+
+[dependencies]
+bevy = "0.10"
+
+# [dev.dependencies]
+cameras = { path = "../cameras" }
+bevy-inspector-egui = "0.18"

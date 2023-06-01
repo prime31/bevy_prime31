@@ -132,11 +132,11 @@ fn get_primary_window_size(window: &Window) -> Vec2 {
 }
 
 fn spawn_camera(query: Query<(Entity, &Transform), With<Camera>>, mut commands: Commands) {
-    let tuple = query.get_single().unwrap();
-    let radius = tuple.1.translation.length();
-
-    commands.entity(tuple.0).insert(PanOrbitCamera {
-        radius,
-        ..Default::default()
-    });
+    for (entity, tf) in &query {
+        let radius = tf.translation.length();
+        commands.entity(entity).insert(PanOrbitCamera {
+            radius,
+            ..Default::default()
+        });
+    }
 }
