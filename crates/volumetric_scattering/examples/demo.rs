@@ -80,6 +80,27 @@ fn setup(
         RenderLayers::layer(0),
     ));
 
+    let cube_handle = meshes.add(Mesh::from(shape::Cube::default()));
+    let mat_handle = materials.add(StandardMaterial {
+        base_color: Color::rgb(0.8, 0.7, 0.6),
+        reflectance: 0.2,
+        ..default()
+    });
+
+    for x in -5..5 {
+        commands.spawn((
+            Name::default(),
+            PbrBundle {
+                mesh: cube_handle.clone(),
+                transform: Transform::from_translation(Vec3::new(x as f32, 0.0, 5.0))
+                    .with_scale(Vec3::new(0.5, 20.0, 0.5)),
+                material: mat_handle.clone(),
+                ..default()
+            },
+            RenderLayers::layer(0),
+        ));
+    }
+
     commands.insert_resource(AmbientLight {
         color: Color::ANTIQUE_WHITE,
         brightness: 0.4,
@@ -154,6 +175,27 @@ fn setup(
         NotShadowCaster,
         RenderLayers::layer(1),
     ));
+
+    let cube_handle = meshes.add(Mesh::from(shape::Cube::default()));
+    let mat_handle = materials.add(StandardMaterial {
+        base_color: Color::BLACK,
+        unlit: true,
+        ..default()
+    });
+
+    for x in -5..5 {
+        commands.spawn((
+            Name::default(),
+            PbrBundle {
+                mesh: cube_handle.clone(),
+                transform: Transform::from_translation(Vec3::new(x as f32, 0.0, 5.0))
+                    .with_scale(Vec3::new(0.5, 20.0, 0.5)),
+                material: mat_handle.clone(),
+                ..default()
+            },
+            RenderLayers::layer(1),
+        ));
+    }
 
     commands.spawn((
         PbrBundle {
