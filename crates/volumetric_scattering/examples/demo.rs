@@ -240,7 +240,7 @@ fn cube_rotator(time: Res<Time>, mut query: Query<&mut Transform, With<MainCube>
         }
 
         // transform.translate_around(Vec3::ZERO, Quat::from_rotation_y(angle.to_radians()));
-        transform.scale = Vec3::splat(map(f32::sin(time.elapsed_seconds()), -1.0, 1.0, 1.0, 3.0));
+        transform.scale = Vec3::splat(map(f32::sin(time.elapsed_seconds()), -1.0, 1.0, 1.0, 2.0));
 
         *angle += 0.1 * time.delta_seconds();
         if *angle > 360.0 {
