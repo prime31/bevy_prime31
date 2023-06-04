@@ -30,7 +30,7 @@ pub fn controller_move(
         &mut Velocity,
     )>,
     mut shake_q: Query<&mut Shake3d>,
-    camera_q: Query<&GlobalTransform, With<crate::input::RenderPlayer>>,
+    camera_q: Query<(&GlobalTransform, &Camera), With<crate::input::RenderPlayer>>,
     mut _evt_time_mod: EventWriter<TimeScaleModificationEvent>,
 ) {
     let dt = time.delta_seconds();
@@ -39,8 +39,13 @@ pub fn controller_move(
     let Some(capsule) = collider.as_capsule() else { return };
 
     if input.shoot.pressed {
-        let tf = camera_q.single();
+        let (tf, _camera) = camera_q.single();
         let filter = QueryFilter::only_fixed().exclude_collider(entity).exclude_sensors();
+
+        // alternate way using the camera
+        // let vp_size = camera.logical_viewport_size().unwrap();
+        // let ray = camera.viewport_to_world(tf, Vec2::new(vp_size.x * 0.5, vp_size.y * 0.5)).unwrap();
+
         // TODO: maybe sphere cast and reduce size of collider while grappling?
         if let Some(ray_hit) = physics_context.cast_ray(tf.translation(), tf.forward(), 1000.0, false, filter) {
             println!("hit: {:?}", ray_hit);
