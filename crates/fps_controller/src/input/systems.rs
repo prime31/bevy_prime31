@@ -157,8 +157,9 @@ pub(crate) fn sync_rotation_input(
     let Ok((mut player_tf, input, controller_state)) = player_query.get_single_mut() else { return };
     let Ok((mut render_tf, mut projection)) = render_query.get_single_mut() else { return };
 
-    if let Projection::Perspective(ref mut projection) = *projection {
-        // projection.fov = 0.2;
+    // TODO: make "move_to" tween like system for projection, transform.translation, etc
+    if let Projection::Perspective(ref mut _projection) = *projection {
+        // _projection.fov = 0.2;
     }
 
     let (_, render_pitch, render_tilt) = render_tf.rotation.to_euler(EulerRot::YXZ);
