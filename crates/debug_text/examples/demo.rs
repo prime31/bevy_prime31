@@ -33,6 +33,8 @@ fn screen_print_text(time: Res<Time>) {
         field_2: "Hello world",
         field_3: vec![1, 2, 3, 4],
     };
+
+    #[allow(unused_mut)]
     let mut mut_show = &mut ForShow {
         field_1: current_time + 30.0,
         field_2: "Hello world",
