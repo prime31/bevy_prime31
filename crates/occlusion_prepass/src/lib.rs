@@ -1,61 +1,92 @@
-use std::{hash::Hash, marker::PhantomData};
+pub mod core;
+pub mod node;
 
-use bevy::{
-    asset::load_internal_asset,
-    core_pipeline::prepass::{AlphaMask3dPrepass, Opaque3dPrepass},
-    ecs::system::{
+use bevy::app::{IntoSystemAppConfig, Plugin};
+use bevy::asset::{load_internal_asset, AssetServer, Handle, HandleUntyped};
+use bevy::core_pipeline::core_3d;
+use bevy::core_pipeline::{
+    prelude::Camera3d,
+};
+use bevy::ecs::{
+    prelude::*,
+    system::{
         lifetimeless::{Read, SRes},
         SystemParamItem,
     },
-    pbr::{
-        DrawMesh, MaterialPipeline, MaterialPipelineKey, MeshPipeline, MeshPipelineKey, MeshUniform, RenderMaterials,
-        SetMaterialBindGroup, SetMeshBindGroup, MAX_CASCADES_PER_LIGHT, MAX_DIRECTIONAL_LIGHTS,
-    },
-    prelude::*,
-    reflect::TypeUuid,
-    render::{
-        camera::ExtractedCamera,
-        mesh::MeshVertexBufferLayout,
-        prelude::{Camera, Mesh},
-        render_asset::RenderAssets,
-        render_phase::{
-            sort_phase_system, AddRenderCommand, DrawFunctions, PhaseItem, RenderCommand,
-            RenderCommandResult, RenderPhase, SetItemPipeline, TrackedRenderPass,
-        },
-        render_resource::{
-            BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
-            BindGroupLayoutEntry, BindingResource, BindingType, BlendState, BufferBindingType,
-            ColorTargetState, ColorWrites, CompareFunction, DepthBiasState, DepthStencilState,
-            Extent3d, FragmentState, FrontFace, MultisampleState, PipelineCache, PolygonMode,
-            PrimitiveState, RenderPipelineDescriptor, Shader, ShaderRef, ShaderStages,
-            ShaderType, SpecializedMeshPipeline, SpecializedMeshPipelineError,
-            SpecializedMeshPipelines, StencilFaceState, StencilState, TextureDescriptor,
-            TextureDimension, TextureFormat, TextureSampleType, TextureUsages, TextureViewDimension,
-            VertexState, ShaderDefVal,
-        },
-        renderer::RenderDevice,
-        texture::{FallbackImagesDepth, FallbackImagesMsaa, TextureCache, CachedTexture},
-        view::{ExtractedView, Msaa, ViewUniform, ViewUniformOffset, ViewUniforms, VisibleEntities, prepare_windows},
-        Extract, ExtractSchedule, RenderApp, RenderSet,
-    },
-    utils::HashMap,
 };
+use bevy::reflect::TypeUuid;
+use bevy::render::render_graph::RenderGraph;
+use bevy::render::{
+    camera::ExtractedCamera,
+    mesh::MeshVertexBufferLayout,
+    prelude::{Camera, Mesh},
+    render_asset::RenderAssets,
+    render_phase::{
+        sort_phase_system, AddRenderCommand, DrawFunctions, PhaseItem, RenderCommand, RenderCommandResult, RenderPhase,
+        SetItemPipeline, TrackedRenderPass,
+    },
+    render_resource::{
+        BindGroup, BindGroupDescriptor, BindGroupEntry, BindGroupLayout, BindGroupLayoutDescriptor,
+        BindGroupLayoutEntry, BindingResource, BindingType, BlendState, BufferBindingType, ColorTargetState,
+        ColorWrites, CompareFunction, DepthBiasState, DepthStencilState, Extent3d, FragmentState, FrontFace,
+        MultisampleState, PipelineCache, PolygonMode, PrimitiveState, RenderPipelineDescriptor, Shader, ShaderDefVal,
+        ShaderRef, ShaderStages, ShaderType, SpecializedMeshPipeline, SpecializedMeshPipelineError,
+        SpecializedMeshPipelines, StencilFaceState, StencilState, TextureDescriptor, TextureDimension, TextureFormat,
+        TextureSampleType, TextureUsages, TextureViewDimension, VertexState,
+    },
+    renderer::RenderDevice,
+    texture::{FallbackImagesDepth, FallbackImagesMsaa, TextureCache},
+    view::{ExtractedView, Msaa, ViewUniform, ViewUniformOffset, ViewUniforms, VisibleEntities},
+    Extract, ExtractSchedule, RenderApp, RenderSet,
+};
+use bevy::utils::{tracing::error, HashMap};
 
-pub mod node;
+use bevy::pbr::{
+    AlphaMode, DrawMesh, Material, MaterialPipeline, MaterialPipelineKey, MeshPipeline, MeshPipelineKey, MeshUniform,
+    RenderMaterials, SetMaterialBindGroup, SetMeshBindGroup, MAX_CASCADES_PER_LIGHT, MAX_DIRECTIONAL_LIGHTS,
+};
+use node::OcclusionPrepassNode;
 
-pub const PREPASS_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 321123273254008983);
-pub const OCCLUSION_PREPASS_COLOR_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
-pub const OCCLUSION_PREPASS_DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
+use crate::core::{OcclusionDepthPrepass, OcclusionNormalPrepass, NORMAL_PREPASS_FORMAT};
+use crate::core::{OcclusionViewPrepassTextures, DEPTH_PREPASS_FORMAT};
+use crate::core::{Opaque3dPrepass, AlphaMask3dPrepass};
+use std::{hash::Hash, marker::PhantomData};
 
-/// add to a camera to enable occlusion prepass for it
-#[derive(Component, Default, Reflect)]
-pub struct OcclusionPrepass;
+pub const PREPASS_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 921124473254008984);
 
-#[derive(Component)]
-pub struct OcclusionPrepassTexture {
-    pub texture: Option<CachedTexture>,
-    pub depth_texture: Option<CachedTexture>,
-    pub size: Extent3d,
+pub const PREPASS_BINDINGS_SHADER_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 5533152893177403495);
+
+pub const PREPASS_UTILS_SHADER_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 4603948296044545);
+
+pub struct OcclusionPrepassPlugin;
+
+impl Plugin for OcclusionPrepassPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        let render_app = match app.get_sub_app_mut(RenderApp) {
+            Ok(render_app) => render_app,
+            Err(_) => return,
+        };
+
+        let prepass_node = OcclusionPrepassNode::new(&mut render_app.world);
+        let mut graph = render_app.world.resource_mut::<RenderGraph>();
+        let core_3d_graph = graph.get_sub_graph_mut(core_3d::graph::NAME).unwrap();
+
+        // add ourself to the core 3d graph
+        core_3d_graph.add_node(OcclusionPrepassNode::NAME, prepass_node);
+
+        core_3d_graph.add_slot_edge(
+            core_3d_graph.input_node().id,
+            core_3d::graph::input::VIEW_ENTITY,
+            OcclusionPrepassNode::NAME,
+            OcclusionPrepassNode::IN_VIEW,
+        );
+
+        // add node edges so we run after PREPASS and before MAIN_PASS
+        core_3d_graph.add_node_edge(core_3d::graph::node::PREPASS, OcclusionPrepassNode::NAME);
+        core_3d_graph.add_node_edge(OcclusionPrepassNode::NAME, core_3d::graph::node::MAIN_PASS);
+    }
 }
 
 /// Sets up everything required to use the prepass pipeline.
@@ -73,8 +104,22 @@ impl<M: Material> Plugin for PrepassPipelinePlugin<M>
 where
     M::Data: PartialEq + Eq + Hash + Clone,
 {
-    fn build(&self, app: &mut App) {
-        load_internal_asset!(app, PREPASS_SHADER_HANDLE, "occlusion_prepass.wgsl", Shader::from_wgsl);
+    fn build(&self, app: &mut bevy::app::App) {
+        load_internal_asset!(app, PREPASS_SHADER_HANDLE, "prepass.wgsl", Shader::from_wgsl);
+
+        load_internal_asset!(
+            app,
+            PREPASS_BINDINGS_SHADER_HANDLE,
+            "prepass_bindings.wgsl",
+            Shader::from_wgsl
+        );
+
+        load_internal_asset!(
+            app,
+            PREPASS_UTILS_SHADER_HANDLE,
+            "prepass_utils.wgsl",
+            Shader::from_wgsl
+        );
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
                 return;
@@ -83,7 +128,7 @@ where
         render_app
             .add_system(queue_prepass_view_bind_group::<M>.in_set(RenderSet::Queue))
             .init_resource::<PrepassPipeline<M>>()
-            .init_resource::<PrepassViewBindGroup>()
+            .init_resource::<OcclusionPrepassViewBindGroup>()
             .init_resource::<SpecializedMeshPipelines<PrepassPipeline<M>>>();
     }
 }
@@ -103,7 +148,7 @@ impl<M: Material> Plugin for PrepassPlugin<M>
 where
     M::Data: PartialEq + Eq + Hash + Clone,
 {
-    fn build(&self, app: &mut App) {
+    fn build(&self, app: &mut bevy::app::App) {
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
             return;
         };
@@ -113,7 +158,7 @@ where
             .add_system(
                 prepare_prepass_textures
                     .in_set(RenderSet::Prepare)
-                    .after(prepare_windows),
+                    .after(bevy::render::view::prepare_windows),
             )
             .add_system(queue_prepass_material_meshes::<M>.in_set(RenderSet::Queue))
             .add_system(sort_phase_system::<Opaque3dPrepass>.in_set(RenderSet::PhaseSort))
@@ -260,11 +305,13 @@ where
 
         let vertex_buffer_layout = layout.get_layout(&vertex_attributes)?;
 
-        // The fragment shader is only used when the material uses alpha cutoff values and doesn't rely on the standard prepass shader
-        let fragment = if (key.mesh_key.contains(MeshPipelineKey::ALPHA_MASK)
+        // The fragment shader is only used when the normal prepass is enabled
+        // or the material uses alpha cutoff values and doesn't rely on the standard prepass shader
+        let fragment = if key.mesh_key.contains(MeshPipelineKey::NORMAL_PREPASS)
+            || ((key.mesh_key.contains(MeshPipelineKey::ALPHA_MASK)
                 || blend_key == MeshPipelineKey::BLEND_PREMULTIPLIED_ALPHA
                 || blend_key == MeshPipelineKey::BLEND_ALPHA)
-                && self.material_fragment_shader.is_some()
+                && self.material_fragment_shader.is_some())
         {
             // Use the fragment shader from the material if present
             let frag_shader_handle = if let Some(handle) = &self.material_fragment_shader {
@@ -318,9 +365,8 @@ where
                 polygon_mode: PolygonMode::Fill,
                 conservative: false,
             },
-            // depth_stencil: None,
             depth_stencil: Some(DepthStencilState {
-                format: OCCLUSION_PREPASS_DEPTH_FORMAT,
+                format: DEPTH_PREPASS_FORMAT,
                 depth_write_enabled: true,
                 depth_compare: CompareFunction::GreaterEqual,
                 stencil: StencilState {
@@ -341,7 +387,7 @@ where
                 alpha_to_coverage_enabled: false,
             },
             push_constant_ranges: Vec::new(),
-            label: Some("occlusion_prepass_pipeline".into()),
+            label: Some("prepass_pipeline".into()),
         };
 
         // This is a bit risky because it's possible to change something that would
@@ -381,42 +427,58 @@ pub fn get_bind_group_layout_entries(bindings: [u32; 2], multisampled: bool) -> 
 }
 
 pub fn get_bindings<'a>(
-    occlusion_textures: Option<&'a OcclusionPrepassTexture>,
-    _fallback_images: &'a mut FallbackImagesMsaa,
+    prepass_textures: Option<&'a OcclusionViewPrepassTextures>,
+    fallback_images: &'a mut FallbackImagesMsaa,
     fallback_depths: &'a mut FallbackImagesDepth,
     msaa: &'a Msaa,
-    bindings: [u32; 1],
-) -> [BindGroupEntry<'a>; 1] {
-    let depth_view = match occlusion_textures.and_then(|x| x.texture.as_ref()) {
+    bindings: [u32; 2],
+) -> [BindGroupEntry<'a>; 2] {
+    let depth_view = match prepass_textures.and_then(|x| x.depth.as_ref()) {
         Some(texture) => &texture.default_view,
         None => &fallback_depths.image_for_samplecount(msaa.samples()).texture_view,
+    };
+
+    let normal_view = match prepass_textures.and_then(|x| x.normal.as_ref()) {
+        Some(texture) => &texture.default_view,
+        None => &fallback_images.image_for_samplecount(msaa.samples()).texture_view,
     };
 
     [
         BindGroupEntry {
             binding: bindings[0],
             resource: BindingResource::TextureView(depth_view),
-        }
+        },
+        BindGroupEntry {
+            binding: bindings[1],
+            resource: BindingResource::TextureView(normal_view),
+        },
     ]
 }
 
 // Extract the render phases for the prepass
 pub fn extract_camera_prepass_phase(
     mut commands: Commands,
-    cameras_3d: Extract<Query<(Entity, &Camera, Option<&OcclusionPrepass>), With<Camera3d>>>,
+    cameras_3d: Extract<Query<(Entity, &Camera, Option<&OcclusionDepthPrepass>, Option<&OcclusionNormalPrepass>), With<Camera3d>>>,
 ) {
-    for (entity, camera, occlusion_prepass) in cameras_3d.iter() {
+    for (entity, camera, depth_prepass, normal_prepass) in cameras_3d.iter() {
         if !camera.is_active {
             continue;
         }
 
         let mut entity = commands.get_or_spawn(entity);
-        if occlusion_prepass.is_some() {
+        if depth_prepass.is_some() || normal_prepass.is_some() {
             entity.insert((
-                OcclusionPrepass,
                 RenderPhase::<Opaque3dPrepass>::default(),
                 RenderPhase::<AlphaMask3dPrepass>::default(),
             ));
+        }
+        if depth_prepass.is_some() {
+            entity.insert(OcclusionDepthPrepass);
+            println!("depth has");
+        }
+        if normal_prepass.is_some() {
+            entity.insert(OcclusionNormalPrepass);
+            println!("normal has");
         }
     }
 }
@@ -428,7 +490,7 @@ pub fn prepare_prepass_textures(
     msaa: Res<Msaa>,
     render_device: Res<RenderDevice>,
     views_3d: Query<
-        (Entity, &ExtractedCamera, Option<&OcclusionPrepass>),
+        (Entity, &ExtractedCamera, Option<&OcclusionDepthPrepass>, Option<&OcclusionNormalPrepass>),
         (
             With<RenderPhase<Opaque3dPrepass>>,
             With<RenderPhase<AlphaMask3dPrepass>>,
@@ -436,8 +498,8 @@ pub fn prepare_prepass_textures(
     >,
 ) {
     let mut depth_textures = HashMap::default();
-    let mut color_textures = HashMap::default();
-    for (entity, camera, occlusion_prepass) in &views_3d {
+    let mut normal_textures = HashMap::default();
+    for (entity, camera, depth_prepass, normal_prepass) in &views_3d {
         let Some(physical_target_size) = camera.physical_target_size else {
             continue;
         };
@@ -448,28 +510,8 @@ pub fn prepare_prepass_textures(
             height: physical_target_size.y,
         };
 
-        let cached_color_texture = occlusion_prepass.is_some().then(|| {
-            color_textures
-                .entry(camera.target.clone())
-                .or_insert_with(|| {
-                    let descriptor = TextureDescriptor {
-                        label: Some("prepass_texture"),
-                        size,
-                        mip_level_count: 1,
-                        sample_count: msaa.samples(),
-                        dimension: TextureDimension::D2,
-                        format: OCCLUSION_PREPASS_COLOR_FORMAT,
-                        usage: TextureUsages::COPY_DST
-                            | TextureUsages::RENDER_ATTACHMENT
-                            | TextureUsages::TEXTURE_BINDING,
-                        view_formats: &[],
-                    };
-                    texture_cache.get(&render_device, descriptor)
-                })
-                .clone()
-        });
-
-        let cached_depth_texture = occlusion_prepass.is_some().then(|| {
+        let cached_depth_texture = depth_prepass.is_some().then(|| {
+            println!("prepare depth texture");
             depth_textures
                 .entry(camera.target.clone())
                 .or_insert_with(|| {
@@ -479,7 +521,7 @@ pub fn prepare_prepass_textures(
                         mip_level_count: 1,
                         sample_count: msaa.samples(),
                         dimension: TextureDimension::D2,
-                        format: OCCLUSION_PREPASS_DEPTH_FORMAT,
+                        format: DEPTH_PREPASS_FORMAT,
                         usage: TextureUsages::COPY_DST
                             | TextureUsages::RENDER_ATTACHMENT
                             | TextureUsages::TEXTURE_BINDING,
@@ -490,16 +532,38 @@ pub fn prepare_prepass_textures(
                 .clone()
         });
 
-        commands.entity(entity).insert(OcclusionPrepassTexture {
-            texture: cached_color_texture,
-            depth_texture: cached_depth_texture,
+        let cached_normals_texture = normal_prepass.is_some().then(|| {
+            println!("prepare normal texture");
+            normal_textures
+                .entry(camera.target.clone())
+                .or_insert_with(|| {
+                    texture_cache.get(
+                        &render_device,
+                        TextureDescriptor {
+                            label: Some("prepass_normal_texture"),
+                            size,
+                            mip_level_count: 1,
+                            sample_count: msaa.samples(),
+                            dimension: TextureDimension::D2,
+                            format: NORMAL_PREPASS_FORMAT,
+                            usage: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                            view_formats: &[],
+                        },
+                    )
+                })
+                .clone()
+        });
+
+        commands.entity(entity).insert(OcclusionViewPrepassTextures {
+            depth: cached_depth_texture,
+            normal: cached_normals_texture,
             size,
         });
     }
 }
 
 #[derive(Default, Resource)]
-pub struct PrepassViewBindGroup {
+pub struct OcclusionPrepassViewBindGroup {
     bind_group: Option<BindGroup>,
 }
 
@@ -507,7 +571,7 @@ pub fn queue_prepass_view_bind_group<M: Material>(
     render_device: Res<RenderDevice>,
     prepass_pipeline: Res<PrepassPipeline<M>>,
     view_uniforms: Res<ViewUniforms>,
-    mut prepass_view_bind_group: ResMut<PrepassViewBindGroup>,
+    mut prepass_view_bind_group: ResMut<OcclusionPrepassViewBindGroup>,
 ) {
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
         prepass_view_bind_group.bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
@@ -515,7 +579,7 @@ pub fn queue_prepass_view_bind_group<M: Material>(
                 binding: 0,
                 resource: view_binding,
             }],
-            label: Some("prepass_view_bind_group"),
+            label: Some("occlusion_prepass_view_bind_group"),
             layout: &prepass_pipeline.view_layout,
         }));
     }
@@ -537,21 +601,25 @@ pub fn queue_prepass_material_meshes<M: Material>(
         &VisibleEntities,
         &mut RenderPhase<Opaque3dPrepass>,
         &mut RenderPhase<AlphaMask3dPrepass>,
-        Option<&OcclusionPrepass>,
+        Option<&OcclusionDepthPrepass>,
+        Option<&OcclusionNormalPrepass>,
     )>,
 ) where
     M::Data: PartialEq + Eq + Hash + Clone,
 {
     let opaque_draw_prepass = opaque_draw_functions.read().get_id::<DrawPrepass<M>>().unwrap();
     let alpha_mask_draw_prepass = alpha_mask_draw_functions.read().get_id::<DrawPrepass<M>>().unwrap();
-    for (view, visible_entities, mut opaque_phase, mut alpha_mask_phase, occlusion_prepass) in &mut views {
+    for (view, visible_entities, mut opaque_phase, mut alpha_mask_phase, depth_prepass, normal_prepass) in &mut views {
         let mut view_key = MeshPipelineKey::from_msaa_samples(msaa.samples());
-        if occlusion_prepass.is_some() {
-            // TODO: ???
+        if depth_prepass.is_some() {
             view_key |= MeshPipelineKey::DEPTH_PREPASS;
+        }
+        if normal_prepass.is_some() {
+            view_key |= MeshPipelineKey::NORMAL_PREPASS;
         }
 
         let rangefinder = view.rangefinder3d();
+
         for visible_entity in &visible_entities.entities {
             let Ok((material_handle, mesh_handle, mesh_uniform)) = material_meshes.get(*visible_entity) else {
                 continue;
@@ -615,7 +683,7 @@ pub fn queue_prepass_material_meshes<M: Material>(
 
 pub struct SetPrepassViewBindGroup<const I: usize>;
 impl<P: PhaseItem, const I: usize> RenderCommand<P> for SetPrepassViewBindGroup<I> {
-    type Param = SRes<PrepassViewBindGroup>;
+    type Param = SRes<OcclusionPrepassViewBindGroup>;
     type ViewWorldQuery = Read<ViewUniformOffset>;
     type ItemWorldQuery = ();
 

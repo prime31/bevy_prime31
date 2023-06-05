@@ -1,6 +1,9 @@
-use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
+use bevy::{
+    core_pipeline::clear_color::ClearColorConfig, pbr::NotShadowCaster, prelude::*, reflect::TypeUuid,
+    render::render_resource::{AsBindGroup, ShaderRef},
+};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use occlusion_prepass::{PrepassPipelinePlugin, PrepassPlugin, OcclusionPrepass};
+use occlusion_prepass::{OcclusionPrepassPlugin, PrepassPipelinePlugin, PrepassPlugin, core::OcclusionViewPrepassTextures};
 
 fn main() {
     App::new()
@@ -8,12 +11,19 @@ fn main() {
             watch_for_changes: true,
             ..Default::default()
         }))
+        .add_plugin(OcclusionPrepassPlugin)
         .add_plugin(PrepassPipelinePlugin::<StandardMaterial>::default())
         .add_plugin(PrepassPlugin::<StandardMaterial>::default())
         .add_plugin(cameras::pan_orbit::PanOrbitCameraPlugin)
         .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(MaterialPlugin::<PrepassOutputMaterial> {
+            prepass_enabled: false,
+            ..default()
+        })
         .add_startup_system(setup)
+        .add_startup_system(setup_prepass_viewer)
         .add_system(cube_rotator)
+        .add_system(wtf)
         .run();
 }
 
@@ -52,16 +62,40 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
 
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 25.0)).looking_at(Vec3::default(), Vec3::Y),
+            transform: Transform::from_xyz(-2.0, 3., 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             camera_3d: Camera3d {
                 clear_color: ClearColorConfig::Custom(Color::rgb(0.45, 0.76, 0.91)),
                 ..default()
             },
             ..default()
         },
-        bevy::core_pipeline::prepass::DepthPrepass,
-        OcclusionPrepass,
+        occlusion_prepass::core::OcclusionNormalPrepass,
+        // occlusion_prepass::core::OcclusionDepthPrepass,
     ));
+}
+
+fn setup_prepass_viewer(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut depth_materials: ResMut<Assets<PrepassOutputMaterial>>,
+) {
+    commands.spawn((
+        MaterialMeshBundle {
+            mesh: meshes.add(shape::Quad::new(Vec2::new(20.0, 20.0)).into()),
+            material: depth_materials.add(PrepassOutputMaterial {
+                color_texture: None,
+            }),
+            transform: Transform::from_xyz(-0.75, 1.25, 3.0).looking_at(Vec3::new(2.0, -2.5, -5.0), Vec3::Y),
+            ..default()
+        },
+        NotShadowCaster,
+    ));
+}
+
+fn wtf(q: Query<&OcclusionViewPrepassTextures, With<Camera>>) {
+    for textures in &q {
+        println!("fuck me");
+    }
 }
 
 fn cube_rotator(time: Res<Time>, mut query: Query<&mut Transform, With<MainCube>>, mut angle: Local<f32>) {
@@ -82,5 +116,20 @@ fn cube_rotator(time: Res<Time>, mut query: Query<&mut Transform, With<MainCube>
         if *angle > 360.0 {
             *angle = 0.0;
         }
+    }
+}
+
+#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[uuid = "0af99895-b96e-4451-bc12-c6b1c1c52751"]
+pub struct PrepassOutputMaterial {
+    #[texture(0)]
+    #[sampler(1)]
+    color_texture: Option<Handle<Image>>,
+}
+
+impl Material for PrepassOutputMaterial {
+    // This needs to be transparent in order to show the scene behind the mesh
+    fn alpha_mode(&self) -> AlphaMode {
+        AlphaMode::Blend
     }
 }
