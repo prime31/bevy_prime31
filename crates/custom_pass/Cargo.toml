@@ -1,0 +1,14 @@
+[package]
+name = "custom_pass"
+version = "0.0.1"
+edition = "2021"
+description = ""
+readme = "README.md"
+
+[dependencies]
+bevy = { version = "0.10.0", features = ["dynamic_linking"] }
+radsort = "0.1"
+
+# [dev.dependencies]
+cameras = { path = "../cameras" }
+bevy-inspector-egui = "0.18"
