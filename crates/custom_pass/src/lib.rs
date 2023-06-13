@@ -618,6 +618,7 @@ pub fn queue_prepass_material_meshes<M: Material>(
 ) where
     M::Data: PartialEq + Eq + Hash + Clone,
 {
+    println!("-- queue_prepass_material_meshes --");
     let opaque_draw_prepass = opaque_draw_functions
         .read()
         .get_id::<DrawOcclusionPrepass<M>>()
@@ -651,7 +652,8 @@ pub fn queue_prepass_material_meshes<M: Material>(
                 continue;
             };
             println!(
-                "------ maybe found something extracted. light: {:?}, occluder: {:?}",
+                "------ maybe found something extracted. entity: {:?}, light: {:?}, occluder: {:?}",
+                visible_entity,
                 is_light.is_some(),
                 is_occluder.is_some()
             );
@@ -684,20 +686,23 @@ pub fn queue_prepass_material_meshes<M: Material>(
             let distance = rangefinder.distance(&mesh_uniform.transform) + material.properties.depth_bias;
             match alpha_mode {
                 AlphaMode::Opaque => {
-                    // TODO: dont do this, only add the occluders to this phase
-                    opaque_phase.add(CustomOpaque3dPrepass {
-                        entity: *visible_entity,
-                        draw_function: opaque_draw_prepass,
-                        pipeline_id,
-                        distance,
-                    });
-                    // TODO: dont do this, only add the light to this phase
-                    light_opaque_phase.add(CustomLightOpaque3dPrepass {
-                        entity: *visible_entity,
-                        draw_function: opaque_draw_prepass,
-                        pipeline_id,
-                        distance,
-                    });
+                    if is_occluder.is_some() {
+                        opaque_phase.add(CustomOpaque3dPrepass {
+                            entity: *visible_entity,
+                            draw_function: opaque_draw_prepass,
+                            pipeline_id,
+                            distance,
+                        });
+                    }
+
+                    if is_light.is_some() {
+                        light_opaque_phase.add(CustomLightOpaque3dPrepass {
+                            entity: *visible_entity,
+                            draw_function: opaque_draw_prepass,
+                            pipeline_id,
+                            distance,
+                        });
+                    }
                 }
                 AlphaMode::Mask(_) => todo!(),
                 AlphaMode::Blend | AlphaMode::Premultiplied | AlphaMode::Add | AlphaMode::Multiply => {}
