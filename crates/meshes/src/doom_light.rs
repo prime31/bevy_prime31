@@ -3,7 +3,7 @@
 use bevy::{
     math::Vec4Swizzles,
     prelude::*,
-    reflect::TypeUuid,
+    reflect::{TypePath, TypeUuid},
     render::{
         mesh::{Indices, VertexAttributeValues},
         render_resource::{AsBindGroup, PrimitiveTopology, ShaderRef},
@@ -14,7 +14,7 @@ pub struct DoomLightsPlugin;
 
 impl Plugin for DoomLightsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(update_lights);
+        app.add_systems(Update, update_lights);
     }
 }
 
@@ -29,7 +29,9 @@ fn update_lights(
         if !visiblity.is_visible() {
             continue;
         }
-        let Some(mesh) = meshes.get_mut(mesh_handle) else { return };
+        let Some(mesh) = meshes.get_mut(mesh_handle) else {
+            return;
+        };
 
         // Everything is in local space unless said otherwise
         let tf_inverse_mat = tf.compute_matrix().inverse();
@@ -111,7 +113,7 @@ fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 
     value.clamp(out_min, out_max)
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct DoomLightMaterial {}
 

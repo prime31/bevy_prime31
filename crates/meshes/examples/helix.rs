@@ -6,9 +6,9 @@ use meshes::SphericalHelix;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(FlycamPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_startup_system(setup)
+        .add_plugins(FlycamPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_systems(Startup, setup)
         .run();
 }
 

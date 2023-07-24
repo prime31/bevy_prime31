@@ -2,7 +2,7 @@ pub mod core;
 pub mod node;
 pub mod phase_items;
 
-use bevy::app::{IntoSystemAppConfig, Plugin};
+use bevy::app::Plugin;
 use bevy::asset::{load_internal_asset, AssetServer, Handle, HandleUntyped};
 use bevy::core_pipeline::core_3d;
 use bevy::core_pipeline::prelude::Camera3d;
@@ -16,6 +16,7 @@ use bevy::ecs::{
 use bevy::reflect::TypeUuid;
 use bevy::render::extract_component::ExtractComponentPlugin;
 use bevy::render::render_graph::RenderGraph;
+use bevy::render::Render;
 
 use bevy::render::{
     camera::ExtractedCamera,
@@ -66,8 +67,8 @@ pub struct OcclusionPrepassPlugin;
 
 impl Plugin for OcclusionPrepassPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugin(ExtractComponentPlugin::<OcclusionPrepassLight>::default());
-        app.add_plugin(ExtractComponentPlugin::<OcclusionPrepassOccluder>::default());
+        app.add_plugins(ExtractComponentPlugin::<OcclusionPrepassLight>::default());
+        app.add_plugins(ExtractComponentPlugin::<OcclusionPrepassOccluder>::default());
 
         let render_app = match app.get_sub_app_mut(RenderApp) {
             Ok(render_app) => render_app,
@@ -90,7 +91,7 @@ impl Plugin for OcclusionPrepassPlugin {
 
         // add node edges so we run after PREPASS and before MAIN_PASS
         core_3d_graph.add_node_edge(core_3d::graph::node::PREPASS, OcclusionPrepassNode::NAME);
-        core_3d_graph.add_node_edge(OcclusionPrepassNode::NAME, core_3d::graph::node::MAIN_PASS);
+        core_3d_graph.add_node_edge(OcclusionPrepassNode::NAME, core_3d::graph::node::START_MAIN_PASS);
     }
 }
 
@@ -127,11 +128,11 @@ where
         );
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
-                return;
-            };
+            return;
+        };
 
         render_app
-            .add_system(queue_prepass_view_bind_group::<M>.in_set(RenderSet::Queue))
+            .add_systems(Render, queue_prepass_view_bind_group::<M>.in_set(RenderSet::Queue))
             .init_resource::<OcclusionPrepassPipeline<M>>()
             .init_resource::<OcclusionPrepassViewBindGroup>()
             .init_resource::<SpecializedMeshPipelines<OcclusionPrepassPipeline<M>>>();
@@ -159,15 +160,22 @@ where
         };
 
         render_app
-            .add_system(extract_camera_prepass_phase.in_schedule(ExtractSchedule))
-            .add_system(
+            .add_systems(ExtractSchedule, extract_camera_prepass_phase)
+            .add_systems(
+                Render,
                 prepare_prepass_textures
                     .in_set(RenderSet::Prepare)
                     .after(bevy::render::view::prepare_windows),
             )
-            .add_system(queue_prepass_material_meshes::<M>.in_set(RenderSet::Queue))
-            .add_system(sort_phase_system::<CustomOpaque3dPrepass>.in_set(RenderSet::PhaseSort))
-            .add_system(sort_phase_system::<CustomLightOpaque3dPrepass>.in_set(RenderSet::PhaseSort))
+            .add_systems(Render, queue_prepass_material_meshes::<M>.in_set(RenderSet::Queue))
+            .add_systems(
+                Render,
+                sort_phase_system::<CustomOpaque3dPrepass>.in_set(RenderSet::PhaseSort),
+            )
+            .add_systems(
+                Render,
+                sort_phase_system::<CustomLightOpaque3dPrepass>.in_set(RenderSet::PhaseSort),
+            )
             .init_resource::<DrawFunctions<CustomOpaque3dPrepass>>()
             .init_resource::<DrawFunctions<CustomLightOpaque3dPrepass>>()
             .add_render_command::<CustomOpaque3dPrepass, DrawOcclusionPrepass<M>>()
@@ -213,8 +221,8 @@ impl<M: Material> FromWorld for OcclusionPrepassPipeline<M> {
 
         OcclusionPrepassPipeline {
             view_layout,
-            mesh_layout: mesh_pipeline.mesh_layout.clone(),
-            skinned_mesh_layout: mesh_pipeline.skinned_mesh_layout.clone(),
+            mesh_layout: mesh_pipeline.mesh_layouts.model_only.clone(),
+            skinned_mesh_layout: mesh_pipeline.mesh_layouts.skinned.clone(),
             material_vertex_shader: match M::prepass_vertex_shader() {
                 ShaderRef::Default => None,
                 ShaderRef::Handle(handle) => Some(handle),
@@ -255,7 +263,8 @@ where
             shader_defs.push("DEPTH_PREPASS".into());
         }
 
-        if key.mesh_key.contains(MeshPipelineKey::ALPHA_MASK) {
+        // TODO: was alph ALPHA_MASK
+        if key.mesh_key.contains(MeshPipelineKey::BLEND_ALPHA) {
             shader_defs.push("ALPHA_MASK".into());
         }
 
@@ -312,8 +321,9 @@ where
 
         // The fragment shader is only used when the normal prepass is enabled
         // or the material uses alpha cutoff values and doesn't rely on the standard prepass shader
+        // TODO: was alph ALPHA_MASK
         let fragment = if key.mesh_key.contains(MeshPipelineKey::NORMAL_PREPASS)
-            || ((key.mesh_key.contains(MeshPipelineKey::ALPHA_MASK)
+            || ((key.mesh_key.contains(MeshPipelineKey::BLEND_ALPHA)
                 || blend_key == MeshPipelineKey::BLEND_PREMULTIPLIED_ALPHA
                 || blend_key == MeshPipelineKey::BLEND_ALPHA)
                 && self.material_fragment_shader.is_some())
@@ -640,10 +650,8 @@ pub fn queue_prepass_material_meshes<M: Material>(
                 continue;
             };
 
-            let (Some(material), Some(mesh)) = (
-                render_materials.get(material_handle),
-                render_meshes.get(mesh_handle),
-            ) else {
+            let (Some(material), Some(mesh)) = (render_materials.get(material_handle), render_meshes.get(mesh_handle))
+            else {
                 continue;
             };
 
@@ -662,7 +670,7 @@ pub fn queue_prepass_material_meshes<M: Material>(
             let alpha_mode = material.properties.alpha_mode;
             match alpha_mode {
                 AlphaMode::Opaque => {}
-                AlphaMode::Mask(_) => mesh_key |= MeshPipelineKey::ALPHA_MASK,
+                AlphaMode::Mask(_) => mesh_key |= MeshPipelineKey::BLEND_ALPHA, // TODO: was alph ALPHA_MASK
                 AlphaMode::Blend | AlphaMode::Premultiplied | AlphaMode::Add | AlphaMode::Multiply => continue,
             }
 

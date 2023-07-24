@@ -6,15 +6,11 @@ description = "A parser for the `.map` file format used by Quake 1 & 2 as well a
 readme = "README.md"
 
 [dependencies]
-bevy = "0.10"
+bevy = "0.11"
 nom = "5.1.2"
 nom-fields = "0.1.1"
-bevy_rapier3d = "0.21.0"
+bevy_rapier3d = "0.22.0"
 
 [dev-dependencies]
 cameras = { path = "../cameras" }
-bevy-inspector-egui = "0.18"
-
-
-[patch.crates-io]
-bevy_rapier3d = { git = 'https://github.com/dimforge/bevy_rapier' }
+bevy-inspector-egui = "0.19"

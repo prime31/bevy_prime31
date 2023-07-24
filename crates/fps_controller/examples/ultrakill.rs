@@ -18,8 +18,9 @@ use egui_helper::EguiHelperPlugin;
 use fps_controller::{
     camera_shake::*,
     input::{FpsInputPlugin, RenderPlayer},
+    math::map,
     time_controller::TimeManagerPlugin,
-    ultrakill::{UltrakillControllerPlugin, FpsControllerBundle}, math::map,
+    ultrakill::{FpsControllerBundle, UltrakillControllerPlugin},
 };
 use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 
@@ -46,7 +47,10 @@ fn main() {
         .add_plugin(CameraShakePlugin)
         .add_plugin(TimeManagerPlugin)
         .add_startup_system(setup_scene)
-        .add_systems((print_collision_events, display_text, manage_cursor, zoom_2nd_camera))
+        .add_systems(
+            Update,
+            (print_collision_events, display_text, manage_cursor, zoom_2nd_camera),
+        )
         .run();
 }
 
@@ -76,7 +80,7 @@ fn setup_scene(
                 mesh: meshes.add(shape::Capsule::default().into()),
                 material: materials.add(Color::rgb(0.8, 0.1, 0.9).into()),
                 ..Default::default()
-            }
+            },
         ))
         .with_children(|builder| {
             // example of a wall check sensor collider. not sure if this is better than just doing a shape_cast yet.
@@ -148,14 +152,11 @@ fn setup_scene(
         )
         .with_style(Style {
             position_type: PositionType::Absolute,
-            position: UiRect {
-                bottom: Val::Px(5.0),
-                left: Val::Px(5.0),
-                ..default()
-            },
+            bottom: Val::Px(5.0),
+            left: Val::Px(5.0),
             ..default()
         }),
-        TextMarker
+        TextMarker,
     ));
 
     commands.spawn(ValveMapBundle {
@@ -226,7 +227,9 @@ fn zoom_2nd_camera(
         return;
     }
 
-    let Ok((mut proj, mut tf)) = q.get_single_mut() else { return };
+    let Ok((mut proj, mut tf)) = q.get_single_mut() else {
+        return;
+    };
     if let Projection::Perspective(proj) = proj.as_mut() {
         proj.fov = (proj.fov + scroll * 0.02).clamp(10.0_f32.to_radians(), 100.0_f32.to_radians());
 

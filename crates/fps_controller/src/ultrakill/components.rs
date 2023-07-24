@@ -295,4 +295,3 @@ impl Default for FpsControllerBundle {
 //         valve_maps::bevy::ValveMapPlayer,
 //         RenderLayers::layer(1),
 //     ),
-

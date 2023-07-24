@@ -8,10 +8,10 @@ pub struct FlycamPlugin;
 
 impl Plugin for FlycamPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_camera.in_base_set(StartupSet::PostStartup))
-            .add_system(camera_movement)
-            .add_system(camera_look)
-            .add_system(toggle_cursor);
+        app.add_systems(PostStartup, spawn_camera)
+            .add_systems(Update, camera_movement)
+            .add_systems(Update, camera_look)
+            .add_systems(Update, toggle_cursor);
     }
 }
 
@@ -46,7 +46,7 @@ impl Default for FlycamControls {
             key_right: KeyCode::D,
             key_up: KeyCode::E,
             key_down: KeyCode::Q,
-            key_boost: KeyCode::LShift,
+            key_boost: KeyCode::ShiftLeft,
         }
     }
 }

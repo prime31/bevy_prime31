@@ -6,9 +6,9 @@ description = ""
 readme = "README.md"
 
 [dependencies]
-bevy = "0.10"
+bevy = "0.11"
 rand = "*"
-bevy_rapier3d = "0.21.0"
+bevy_rapier3d = "0.22.0"
 valve_maps = { path = "../valve_maps" }
 debug_text = { path = "../debug_text" }
 egui_helper = { path = "../egui_helper" }
@@ -18,6 +18,3 @@ leafwing-input-manager = "*"
 
 [dev-dependencies]
 cameras = { path = "../cameras" }
-
-[patch.crates-io]
-bevy_rapier3d = { git = 'https://github.com/dimforge/bevy_rapier' }

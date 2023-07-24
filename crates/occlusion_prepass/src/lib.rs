@@ -1,12 +1,10 @@
 pub mod core;
 pub mod node;
 
-use bevy::app::{IntoSystemAppConfig, Plugin};
+use bevy::app::Plugin;
 use bevy::asset::{load_internal_asset, AssetServer, Handle, HandleUntyped};
 use bevy::core_pipeline::core_3d;
-use bevy::core_pipeline::{
-    prelude::Camera3d,
-};
+use bevy::core_pipeline::prelude::Camera3d;
 use bevy::ecs::{
     prelude::*,
     system::{
@@ -14,8 +12,10 @@ use bevy::ecs::{
         SystemParamItem,
     },
 };
+use bevy::prelude::Update;
 use bevy::reflect::TypeUuid;
 use bevy::render::render_graph::RenderGraph;
+use bevy::render::Render;
 use bevy::render::{
     camera::ExtractedCamera,
     mesh::MeshVertexBufferLayout,
@@ -47,9 +47,9 @@ use bevy::pbr::{
 };
 use node::OcclusionPrepassNode;
 
+use crate::core::{AlphaMask3dPrepass, Opaque3dPrepass};
 use crate::core::{OcclusionDepthPrepass, OcclusionNormalPrepass, NORMAL_PREPASS_FORMAT};
 use crate::core::{OcclusionViewPrepassTextures, DEPTH_PREPASS_FORMAT};
-use crate::core::{Opaque3dPrepass, AlphaMask3dPrepass};
 use std::{hash::Hash, marker::PhantomData};
 
 pub const PREPASS_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 921124473254008984);
@@ -85,7 +85,7 @@ impl Plugin for OcclusionPrepassPlugin {
 
         // add node edges so we run after PREPASS and before MAIN_PASS
         core_3d_graph.add_node_edge(core_3d::graph::node::PREPASS, OcclusionPrepassNode::NAME);
-        core_3d_graph.add_node_edge(OcclusionPrepassNode::NAME, core_3d::graph::node::MAIN_PASS);
+        core_3d_graph.add_node_edge(OcclusionPrepassNode::NAME, core_3d::graph::node::START_MAIN_PASS);
     }
 }
 
@@ -122,11 +122,11 @@ where
         );
 
         let Ok(render_app) = app.get_sub_app_mut(RenderApp) else {
-                return;
-            };
+            return;
+        };
 
         render_app
-            .add_system(queue_prepass_view_bind_group::<M>.in_set(RenderSet::Queue))
+            .add_systems(Render, queue_prepass_view_bind_group::<M>.in_set(RenderSet::Queue))
             .init_resource::<PrepassPipeline<M>>()
             .init_resource::<OcclusionPrepassViewBindGroup>()
             .init_resource::<SpecializedMeshPipelines<PrepassPipeline<M>>>();
@@ -154,15 +154,22 @@ where
         };
 
         render_app
-            .add_system(extract_camera_prepass_phase.in_schedule(ExtractSchedule))
-            .add_system(
+            .add_systems(ExtractSchedule, extract_camera_prepass_phase)
+            .add_systems(
+                Update,
                 prepare_prepass_textures
                     .in_set(RenderSet::Prepare)
                     .after(bevy::render::view::prepare_windows),
             )
-            .add_system(queue_prepass_material_meshes::<M>.in_set(RenderSet::Queue))
-            .add_system(sort_phase_system::<Opaque3dPrepass>.in_set(RenderSet::PhaseSort))
-            .add_system(sort_phase_system::<AlphaMask3dPrepass>.in_set(RenderSet::PhaseSort))
+            .add_systems(Render, queue_prepass_material_meshes::<M>.in_set(RenderSet::Queue))
+            .add_systems(
+                Render,
+                sort_phase_system::<Opaque3dPrepass>.in_set(RenderSet::PhaseSort),
+            )
+            .add_systems(
+                Render,
+                sort_phase_system::<AlphaMask3dPrepass>.in_set(RenderSet::PhaseSort),
+            )
             .init_resource::<DrawFunctions<Opaque3dPrepass>>()
             .init_resource::<DrawFunctions<AlphaMask3dPrepass>>()
             .add_render_command::<Opaque3dPrepass, DrawPrepass<M>>()
@@ -208,8 +215,8 @@ impl<M: Material> FromWorld for PrepassPipeline<M> {
 
         PrepassPipeline {
             view_layout,
-            mesh_layout: mesh_pipeline.mesh_layout.clone(),
-            skinned_mesh_layout: mesh_pipeline.skinned_mesh_layout.clone(),
+            mesh_layout: mesh_pipeline.mesh_layouts.model_only.clone(),
+            skinned_mesh_layout: mesh_pipeline.mesh_layouts.skinned.clone(),
             material_vertex_shader: match M::prepass_vertex_shader() {
                 ShaderRef::Default => None,
                 ShaderRef::Handle(handle) => Some(handle),
@@ -250,7 +257,8 @@ where
             shader_defs.push("DEPTH_PREPASS".into());
         }
 
-        if key.mesh_key.contains(MeshPipelineKey::ALPHA_MASK) {
+        // TODO: was alph ALPHA_MASK// TODO: was alph ALPHA_MASK
+        if key.mesh_key.contains(MeshPipelineKey::BLEND_ALPHA) {
             shader_defs.push("ALPHA_MASK".into());
         }
 
@@ -308,7 +316,7 @@ where
         // The fragment shader is only used when the normal prepass is enabled
         // or the material uses alpha cutoff values and doesn't rely on the standard prepass shader
         let fragment = if key.mesh_key.contains(MeshPipelineKey::NORMAL_PREPASS)
-            || ((key.mesh_key.contains(MeshPipelineKey::ALPHA_MASK)
+            || ((key.mesh_key.contains(MeshPipelineKey::BLEND_ALPHA) // TODO: was alph ALPHA_MASK
                 || blend_key == MeshPipelineKey::BLEND_PREMULTIPLIED_ALPHA
                 || blend_key == MeshPipelineKey::BLEND_ALPHA)
                 && self.material_fragment_shader.is_some())
@@ -458,7 +466,17 @@ pub fn get_bindings<'a>(
 // Extract the render phases for the prepass
 pub fn extract_camera_prepass_phase(
     mut commands: Commands,
-    cameras_3d: Extract<Query<(Entity, &Camera, Option<&OcclusionDepthPrepass>, Option<&OcclusionNormalPrepass>), With<Camera3d>>>,
+    cameras_3d: Extract<
+        Query<
+            (
+                Entity,
+                &Camera,
+                Option<&OcclusionDepthPrepass>,
+                Option<&OcclusionNormalPrepass>,
+            ),
+            With<Camera3d>,
+        >,
+    >,
 ) {
     for (entity, camera, depth_prepass, normal_prepass) in cameras_3d.iter() {
         if !camera.is_active {
@@ -490,7 +508,12 @@ pub fn prepare_prepass_textures(
     msaa: Res<Msaa>,
     render_device: Res<RenderDevice>,
     views_3d: Query<
-        (Entity, &ExtractedCamera, Option<&OcclusionDepthPrepass>, Option<&OcclusionNormalPrepass>),
+        (
+            Entity,
+            &ExtractedCamera,
+            Option<&OcclusionDepthPrepass>,
+            Option<&OcclusionNormalPrepass>,
+        ),
         (
             With<RenderPhase<Opaque3dPrepass>>,
             With<RenderPhase<AlphaMask3dPrepass>>,
@@ -625,10 +648,8 @@ pub fn queue_prepass_material_meshes<M: Material>(
                 continue;
             };
 
-            let (Some(material), Some(mesh)) = (
-                render_materials.get(material_handle),
-                render_meshes.get(mesh_handle),
-            ) else {
+            let (Some(material), Some(mesh)) = (render_materials.get(material_handle), render_meshes.get(mesh_handle))
+            else {
                 continue;
             };
 
@@ -636,7 +657,7 @@ pub fn queue_prepass_material_meshes<M: Material>(
             let alpha_mode = material.properties.alpha_mode;
             match alpha_mode {
                 AlphaMode::Opaque => {}
-                AlphaMode::Mask(_) => mesh_key |= MeshPipelineKey::ALPHA_MASK,
+                AlphaMode::Mask(_) => mesh_key |= MeshPipelineKey::BLEND_ALPHA, // TODO: was alph ALPHA_MASK
                 AlphaMode::Blend | AlphaMode::Premultiplied | AlphaMode::Add | AlphaMode::Multiply => continue,
             }
 

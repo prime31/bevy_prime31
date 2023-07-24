@@ -34,7 +34,7 @@ fn main() {
         .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(FPSControllerPlugin)
         .add_startup_system(setup_scene)
-        .add_systems((print_collision_events, display_text, manage_cursor))
+        .add_systems(Update, (print_collision_events, display_text, manage_cursor))
         .run();
 }
 
@@ -137,11 +137,8 @@ fn setup_scene(
         )
         .with_style(Style {
             position_type: PositionType::Absolute,
-            position: UiRect {
-                top: Val::Px(5.0),
-                left: Val::Px(5.0),
-                ..default()
-            },
+            top: Val::Px(5.0),
+            left: Val::Px(5.0),
             ..default()
         }),
     );
@@ -165,11 +162,7 @@ fn print_collision_events(
     }
 }
 
-fn manage_cursor(
-    btn: Res<Input<MouseButton>>,
-    key: Res<Input<KeyCode>>,
-    mut window_query: Query<&mut Window>,
-) {
+fn manage_cursor(btn: Res<Input<MouseButton>>, key: Res<Input<KeyCode>>, mut window_query: Query<&mut Window>) {
     let mut window = window_query.single_mut();
     if btn.just_pressed(MouseButton::Left) {
         window.cursor.grab_mode = CursorGrabMode::Locked;

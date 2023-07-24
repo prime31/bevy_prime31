@@ -1,11 +1,14 @@
-use bevy::{prelude::*, reflect::TypeUuid};
-use bevy_rapier3d::prelude::{ActiveEvents, Collider, RigidBody, Sensor};
+use bevy::{
+    prelude::*,
+    reflect::{TypePath, TypeUuid},
+};
+use bevy_rapier3d::prelude::{ActiveEvents, RigidBody, Sensor};
 
 use self::loader::{ValveMapEntity, ValveMapLoader};
 
 pub mod loader;
 
-#[derive(Debug, TypeUuid)]
+#[derive(Debug, TypeUuid, TypePath)]
 #[uuid = "44cadc56-aa9c-4543-8640-a018b74b5052"]
 pub struct ValveMap {
     pub entities: Vec<ValveMapEntity>,
@@ -36,7 +39,7 @@ impl Plugin for ValveMapPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset_loader::<ValveMapLoader>()
             .add_asset::<ValveMap>()
-            .add_system(handle_loaded_maps);
+            .add_systems(Update, handle_loaded_maps);
     }
 }
 
@@ -134,7 +137,7 @@ fn instantiate_map_entities(
 
             for geo in &map_entity.collision_geometry {
                 let mut entity = builder.spawn((
-                    Collider::convex_hull(&geo.to_local()).unwrap(),
+                    // Collider::convex_hull(&geo.to_local()).unwrap(),
                     RigidBody::Fixed, // is this necessary?
                     GlobalTransform::default(),
                     Transform::from_translation(geo.center()),

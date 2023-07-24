@@ -11,11 +11,11 @@ struct Particle;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(FlycamPlugin)
-        .add_startup_system(setup)
-        .add_startup_system(setup_particle_system)
-        .add_system(tick_particles)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(FlycamPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Update, setup_particle_system)
+        .add_systems(Update, tick_particles)
         .run();
 }
 

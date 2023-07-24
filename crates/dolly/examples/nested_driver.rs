@@ -10,11 +10,11 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DollyPlugin)
-        .add_startup_system(setup)
-        .add_system(check_swap_active)
-        .add_system(tick)
-        .add_system(sync_rig_to_camera.after(tick))
+        .add_plugins(DollyPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Update, check_swap_active)
+        .add_systems(Update, tick)
+        .add_systems(Update, sync_rig_to_camera.after(tick))
         .run();
 }
 

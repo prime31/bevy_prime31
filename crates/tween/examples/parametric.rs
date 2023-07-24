@@ -20,10 +20,10 @@ impl Lens<Transform> for TransformParametricPositionLens {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(TweeningPlugin)
-        .add_plugin(cameras::pan_orbit::PanOrbitCameraPlugin)
-        .add_startup_system(setup)
-        .add_startup_system(setup_tween)
+        .add_plugins(TweeningPlugin)
+        .add_plugins(cameras::pan_orbit::PanOrbitCameraPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_tween)
         .run();
 }
 

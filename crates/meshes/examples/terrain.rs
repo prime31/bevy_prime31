@@ -1,7 +1,7 @@
 use bevy::{
     pbr::CascadeShadowConfigBuilder,
     prelude::*,
-    reflect::TypeUuid,
+    reflect::{TypePath, TypeUuid},
     render::{
         mesh::{Indices, VertexAttributeValues},
         render_resource::{AsBindGroup, PrimitiveTopology, ShaderRef},
@@ -15,10 +15,10 @@ use itertools::Itertools;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(FlycamPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(MaterialPlugin::<LandMaterial>::default())
-        .add_startup_system(setup)
+        .add_plugins(FlycamPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(MaterialPlugin::<LandMaterial>::default())
+        .add_systems(Startup, setup)
         .run();
 }
 
@@ -72,7 +72,7 @@ impl Material for LandMaterial {
     }
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct LandMaterial {
     #[uniform(0)]

@@ -64,8 +64,8 @@ pub struct SpectatorPlugin;
 impl Plugin for SpectatorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SpectatorSettings>()
-            .add_startup_system(setup.in_base_set(StartupSet::PostStartup))
-            .add_system(spectator_update);
+            .add_systems(PostStartup, setup)
+            .add_systems(Update, spectator_update);
     }
 }
 
@@ -158,7 +158,7 @@ fn spectator_update(
             let up = if keys.pressed(KeyCode::E) { 1f32 } else { 0f32 };
             let down = if keys.pressed(KeyCode::Q) { 1f32 } else { 0f32 };
 
-            let speed = if keys.pressed(KeyCode::LShift) { settings.alt_speed } else { settings.base_speed };
+            let speed = if keys.pressed(KeyCode::ShiftLeft) { settings.alt_speed } else { settings.base_speed };
 
             let delta_axial = (forward - backward) * speed;
             let delta_lateral = (right - left) * speed;

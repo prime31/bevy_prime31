@@ -7,9 +7,9 @@ struct Player;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DollyPlugin)
-        .add_startup_system(setup)
-        .add_system(tick)
+        .add_plugins(DollyPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Update, tick)
         .run();
 }
 

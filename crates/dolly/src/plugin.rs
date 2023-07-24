@@ -17,7 +17,7 @@ pub struct DollyPlugin;
 
 impl Plugin for DollyPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<DollySettings>().add_system(on_add_rig);
+        app.init_resource::<DollySettings>().add_systems(Update, on_add_rig);
     }
 }
 

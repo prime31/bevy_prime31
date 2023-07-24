@@ -23,8 +23,8 @@ impl Plugin for EguiHelperPlugin {
             enabled: false,
             wants_input: false,
         })
-        .add_plugin(WorldInspectorPlugin::new().run_if(run_if_egui_enabled))
-        .add_system(update.after(EguiSet::ProcessInput).in_base_set(CoreSet::PreUpdate));
+        .add_plugins(WorldInspectorPlugin::new().run_if(run_if_egui_enabled))
+        .add_systems(PreUpdate, update.after(EguiSet::ProcessInput));
     }
 }
 

@@ -6,12 +6,12 @@ use tween::{lens::TransformPositionLens, unit_sphere, Animator, Delay, EaseFunct
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(TweeningPlugin)
-        .add_plugin(bevy::diagnostic::LogDiagnosticsPlugin::default())
-        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
-        .add_startup_system(setup)
-        .add_startup_system(setup_tween)
-        .add_startup_system(setup_tween_sequence)
+        .add_plugins(TweeningPlugin)
+        .add_plugins(bevy::diagnostic::LogDiagnosticsPlugin::default())
+        .add_plugins(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_tween)
+        .add_systems(Startup, setup_tween_sequence)
         .run();
 }
 

@@ -8,8 +8,8 @@ pub struct PanOrbitCameraPlugin;
 
 impl Plugin for PanOrbitCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(spawn_camera.in_base_set(StartupSet::PostStartup))
-            .add_system(pan_orbit_camera);
+        app.add_systems(PostStartup, spawn_camera)
+            .add_systems(Update, pan_orbit_camera);
     }
 }
 

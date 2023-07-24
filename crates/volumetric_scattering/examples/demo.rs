@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use bevy::{
+    asset::ChangeWatcher,
     core_pipeline::clear_color::ClearColorConfig,
     pbr::NotShadowCaster,
     prelude::*,
-    reflect::TypeUuid,
+    reflect::{TypePath, TypeUuid},
     render::{
         camera::RenderTarget,
         render_resource::{
@@ -17,14 +20,14 @@ use bevy_inspector_egui::quick::WorldInspectorPlugin;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(AssetPlugin {
-            watch_for_changes: true,
+            watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(200)),
             ..Default::default()
         }))
-        .add_plugin(Material2dPlugin::<VolumetricScatteringMaterial>::default())
-        .add_plugin(cameras::pan_orbit::PanOrbitCameraPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_startup_system(setup)
-        .add_system(cube_rotator)
+        .add_plugins(Material2dPlugin::<VolumetricScatteringMaterial>::default())
+        .add_plugins(cameras::pan_orbit::PanOrbitCameraPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_systems(Startup, setup)
+        .add_systems(Update, cube_rotator)
         .run();
 }
 
@@ -291,7 +294,7 @@ fn cube_rotator(time: Res<Time>, mut query: Query<&mut Transform, With<MainCube>
     }
 }
 
-#[derive(AsBindGroup, TypeUuid, Clone)]
+#[derive(AsBindGroup, TypeUuid, Clone, TypePath)]
 #[uuid = "bc2f08ec-a0fb-43f1-a908-54871ea597d5"]
 struct VolumetricScatteringMaterial {
     #[texture(0)]

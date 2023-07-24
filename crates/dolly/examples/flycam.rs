@@ -7,10 +7,10 @@ use dolly::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DollyPlugin)
-        .add_startup_system(setup)
-        .add_startup_system(setup_instructions)
-        .add_system(tick)
+        .add_plugins(DollyPlugin)
+        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_instructions)
+        .add_systems(Update, tick)
         .run();
 }
 
@@ -115,11 +115,8 @@ fn setup_instructions(mut commands: Commands, asset_server: Res<AssetServer>) {
     )
     .with_style(Style {
         position_type: PositionType::Absolute,
-        position: UiRect {
-            bottom: Val::Px(10.0),
-            left: Val::Px(10.0),
-            ..default()
-        },
+        bottom: Val::Px(10.0),
+        left: Val::Px(10.0),
         ..default()
     }),));
 }
@@ -161,7 +158,7 @@ fn tick(
         up = 1.0;
     }
 
-    let boost = if keys.pressed(KeyCode::LShift) { 1.0 } else { 0.0 };
+    let boost = if keys.pressed(KeyCode::ShiftLeft) { 1.0 } else { 0.0 };
 
     if keys.just_pressed(KeyCode::C) {
         *use_mouse_motion = !*use_mouse_motion;

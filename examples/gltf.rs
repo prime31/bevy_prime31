@@ -20,9 +20,10 @@ fn main() {
         })
         .insert_resource(GltfState::default())
         .add_plugins(DefaultPlugins)
-        .add_plugin(FlycamPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_systems((setup.on_startup(), check_loaded_scene))
+        .add_plugins(FlycamPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_systems(Startup, setup)
+        .add_systems(Update, check_loaded_scene)
         .run();
 }
 

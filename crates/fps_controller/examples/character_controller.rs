@@ -30,14 +30,14 @@ fn main() {
             color: Color::WHITE,
             brightness: 0.5,
         })
-        .add_plugin(EguiHelperPlugin)
-        .add_plugin(ValveMapPlugin)
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(FpsInputPlugin)
-        .add_plugin(CharacterControllerPlugin)
-        .add_startup_system(setup_scene)
-        .add_systems((print_collision_events, display_text))
+        .add_plugins(EguiHelperPlugin)
+        .add_plugins(ValveMapPlugin)
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(RapierDebugRenderPlugin::default())
+        .add_plugins(FpsInputPlugin)
+        .add_plugins(CharacterControllerPlugin)
+        .add_systems(Startup, setup_scene)
+        .add_systems(Update, (print_collision_events, display_text))
         .run();
 }
 
@@ -134,11 +134,8 @@ fn setup_scene(
         )
         .with_style(Style {
             position_type: PositionType::Absolute,
-            position: UiRect {
-                top: Val::Px(5.0),
-                left: Val::Px(5.0),
-                ..default()
-            },
+            top: Val::Px(5.0),
+            left: Val::Px(5.0),
             ..default()
         }),
     );

@@ -34,8 +34,10 @@ pub struct TweeningPlugin;
 
 impl Plugin for TweeningPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<TweenCompleted>()
-            .add_system(component_animator_system::<Transform>.in_set(AnimationSystem::AnimationUpdate));
+        app.add_event::<TweenCompleted>().add_systems(
+            Update,
+            component_animator_system::<Transform>.in_set(AnimationSystem::AnimationUpdate),
+        );
     }
 }
 

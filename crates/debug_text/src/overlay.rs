@@ -182,7 +182,12 @@ impl CommandChannels {
         color: Option<Color>,
     ) {
         let text = format!("{}\n", text());
-        let cmd = Command::Refresh { text, key, color, timeout };
+        let cmd = Command::Refresh {
+            text,
+            key,
+            color,
+            timeout,
+        };
         self.sender
             .try_send(cmd)
             .expect("Number of debug messages exceeds limit!");
@@ -253,15 +258,13 @@ struct PushEntry {
 #[derive(Default)]
 struct PushList(Vec<PushEntry>);
 impl PushList {
-    fn new_or_allocate(
-        &mut self,
-        spawn_new: impl FnOnce() -> Entity,
-        current: f64,
-        timeout: f64,
-    ) -> Option<Entity> {
+    fn new_or_allocate(&mut self, spawn_new: impl FnOnce() -> Entity, current: f64, timeout: f64) -> Option<Entity> {
         let free_existing = self.0.iter_mut().find(|entry| entry.expired < current);
         let ret = free_existing.as_ref().map(|entry| entry.entity);
-        let new_entry = || PushEntry { entity: spawn_new(), expired: current + timeout };
+        let new_entry = || PushEntry {
+            entity: spawn_new(),
+            expired: current + timeout,
+        };
         match free_existing {
             Some(to_update) => to_update.expired = current + timeout,
             None => self.0.push(new_entry()),
@@ -286,7 +289,10 @@ fn update_messages_as_per_commands(
     };
     let current_time = time.elapsed_seconds_f64();
     let mut spawn_new = |text, color, timeout| {
-        let style = Style { position_type: PositionType::Absolute, ..default() };
+        let style = Style {
+            position_type: PositionType::Absolute,
+            ..default()
+        };
         cmds.spawn((
             TextBundle::from_section(text, text_style(color)).with_style(style),
             Message::new(timeout + current_time),
@@ -310,7 +316,12 @@ fn update_messages_as_per_commands(
     let iterator = channels.receiver.lock().unwrap();
     for message in iterator.try_iter() {
         match message {
-            Command::Refresh { key, color, text, timeout } => {
+            Command::Refresh {
+                key,
+                color,
+                text,
+                timeout,
+            } => {
                 let color = color.unwrap_or(options.color);
                 if let Some(&entity) = key_entities.get(&key) {
                     update_message(entity, text, color, timeout);
@@ -345,8 +356,8 @@ fn layout_messages(
             *vis = if is_visible { Hidden } else { Visible };
             if !is_expired {
                 let offset = line_sizes.insert_size(entity, size.y);
-                style.position.top = Val::Px(offset);
-                style.position.left = Val::Px(0.0);
+                style.top = Val::Px(offset);
+                style.left = Val::Px(0.0);
             } else {
                 line_sizes.remove(entity);
             }
@@ -386,7 +397,7 @@ impl Plugin for DebugTextPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource::<Options>(self.into())
             .init_resource::<OverlayFont>()
-            .add_system(layout_messages)
-            .add_system(update_messages_as_per_commands.before(layout_messages));
+            .add_systems(Update, layout_messages)
+            .add_systems(Update, update_messages_as_per_commands.before(layout_messages));
     }
 }

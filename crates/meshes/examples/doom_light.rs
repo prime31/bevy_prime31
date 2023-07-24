@@ -6,13 +6,13 @@ use meshes::doom_light::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(FlycamPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(MaterialPlugin::<DoomLightMaterial>::default())
-        .add_plugin(DoomLightsPlugin)
+        .add_plugins(FlycamPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(MaterialPlugin::<DoomLightMaterial>::default())
+        .add_plugins(DoomLightsPlugin)
         .insert_resource(ClearColor(Color::DARK_GRAY))
-        .add_startup_system(setup)
-        .add_system(camera_orbit)
+        .add_systems(Startup, setup)
+        .add_systems(Update, camera_orbit)
         .register_type::<DoomLight>()
         .run();
 }

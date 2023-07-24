@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use bevy::{
+    asset::ChangeWatcher,
     prelude::{
         default, AmbientLight, App, AssetPlugin, AssetServer, Camera3dBundle, Color, Commands, PluginGroup, Res,
         Transform, Vec3, *,
@@ -13,20 +16,20 @@ use valve_maps::bevy::{ValveMapBundle, ValveMapPlugin};
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(AssetPlugin {
-            watch_for_changes: true,
+            watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(200)),
             ..Default::default()
         }))
-        .add_plugin(ValveMapPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
-        .add_startup_system(setup_scene)
-        .add_plugin(FlycamPlugin)
+        .add_plugins(ValveMapPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugins(RapierDebugRenderPlugin::default())
+        .add_systems(Startup, setup_scene)
+        .add_plugins(FlycamPlugin)
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 0.5,
         })
-        .add_system(print_collision_events)
+        .add_systems(Update, print_collision_events)
         .run();
 }
 

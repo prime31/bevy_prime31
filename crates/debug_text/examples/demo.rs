@@ -4,11 +4,11 @@ use debug_text::{screen_print, DebugTextPlugin};
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(DebugTextPlugin::default())
-        .add_startup_system(setup)
-        .add_system(screen_print_text)
-        .add_system(show_fps)
-        .add_system(show_cursor_position)
+        .add_plugins(DebugTextPlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, screen_print_text)
+        .add_systems(Update, show_fps)
+        .add_systems(Update, show_cursor_position)
         .run();
 }
 
@@ -108,12 +108,13 @@ fn show_cursor_position(
     let at_interval = |t: f64| current_time % t < delta;
     if at_interval(0.5) {
         let (camera, camera_transform) = camera.single();
-        let Ok(window) = primary_query.get_single() else { return; };
+        let Ok(window) = primary_query.get_single() else {
+            return;
+        };
         if let Some(screen_pos) = window.cursor_position() {
             let window_size = Vec2::new(window.width(), window.height());
             let ndc = (screen_pos / window_size) * 2.0 - Vec2::ONE;
-            let ndc_to_world =
-                camera_transform.compute_matrix() * camera.projection_matrix().inverse();
+            let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix().inverse();
             let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
             let world_pos: Vec2 = world_pos.truncate();
 

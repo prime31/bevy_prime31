@@ -8,7 +8,7 @@ pub struct FPSControllerPlugin;
 
 impl Plugin for FPSControllerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems((controller_input, controller_move, controller_render));
+        app.add_systems(Update, (controller_input, controller_move, controller_render));
     }
 }
 

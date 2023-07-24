@@ -1,29 +1,37 @@
+use std::time::Duration;
+
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig, pbr::NotShadowCaster, prelude::*, reflect::TypeUuid,
-    render::render_resource::{AsBindGroup, ShaderRef},
+    asset::ChangeWatcher,
+    core_pipeline::clear_color::ClearColorConfig,
+    pbr::NotShadowCaster,
+    prelude::*,
+    reflect::{TypePath, TypeUuid},
+    render::render_resource::AsBindGroup,
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use occlusion_prepass::{OcclusionPrepassPlugin, PrepassPipelinePlugin, PrepassPlugin, core::OcclusionViewPrepassTextures};
+use occlusion_prepass::{
+    core::OcclusionViewPrepassTextures, OcclusionPrepassPlugin, PrepassPipelinePlugin, PrepassPlugin,
+};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(AssetPlugin {
-            watch_for_changes: true,
+            watch_for_changes: ChangeWatcher::with_delay(Duration::from_millis(200)),
             ..Default::default()
         }))
-        .add_plugin(OcclusionPrepassPlugin)
-        .add_plugin(PrepassPipelinePlugin::<StandardMaterial>::default())
-        .add_plugin(PrepassPlugin::<StandardMaterial>::default())
-        .add_plugin(cameras::pan_orbit::PanOrbitCameraPlugin)
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(MaterialPlugin::<PrepassOutputMaterial> {
+        .add_plugins(OcclusionPrepassPlugin)
+        .add_plugins(PrepassPipelinePlugin::<StandardMaterial>::default())
+        .add_plugins(PrepassPlugin::<StandardMaterial>::default())
+        .add_plugins(cameras::pan_orbit::PanOrbitCameraPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
+        .add_plugins(MaterialPlugin::<PrepassOutputMaterial> {
             prepass_enabled: false,
             ..default()
         })
-        .add_startup_system(setup)
-        .add_startup_system(setup_prepass_viewer)
-        .add_system(cube_rotator)
-        .add_system(wtf)
+        .add_systems(Startup, setup)
+        .add_systems(Startup, setup_prepass_viewer)
+        .add_systems(Update, cube_rotator)
+        .add_systems(Update, wtf)
         .run();
 }
 
@@ -82,9 +90,7 @@ fn setup_prepass_viewer(
     commands.spawn((
         MaterialMeshBundle {
             mesh: meshes.add(shape::Quad::new(Vec2::new(20.0, 20.0)).into()),
-            material: depth_materials.add(PrepassOutputMaterial {
-                color_texture: None,
-            }),
+            material: depth_materials.add(PrepassOutputMaterial { color_texture: None }),
             transform: Transform::from_xyz(-0.75, 1.25, 3.0).looking_at(Vec3::new(2.0, -2.5, -5.0), Vec3::Y),
             ..default()
         },
@@ -119,7 +125,7 @@ fn cube_rotator(time: Res<Time>, mut query: Query<&mut Transform, With<MainCube>
     }
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath)]
 #[uuid = "0af99895-b96e-4451-bc12-c6b1c1c52751"]
 pub struct PrepassOutputMaterial {
     #[texture(0)]
