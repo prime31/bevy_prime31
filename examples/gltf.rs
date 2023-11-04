@@ -57,6 +57,7 @@ fn check_loaded_scene(
     scenes: Res<Assets<Scene>>,
     meshes: Res<Assets<GltfMesh>>,
 ) {
+    println!("wtf: {:?}", gltf_state.is_loaded);
     if gltf_state.is_loaded {
         return;
     };

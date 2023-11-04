@@ -16,7 +16,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(FlycamPlugin)
-        .add_plugins(WorldInspectorPlugin::new())
+        // .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(MaterialPlugin::<LandMaterial>::default())
         .add_systems(Startup, setup)
         .run();
@@ -72,7 +72,7 @@ impl Material for LandMaterial {
     }
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath)]
+#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath, Asset)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct LandMaterial {
     #[uniform(0)]

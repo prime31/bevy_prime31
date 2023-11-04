@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use bevy::{
-    asset::ChangeWatcher,
     core_pipeline::clear_color::ClearColorConfig,
     pbr::NotShadowCaster,
     prelude::*,

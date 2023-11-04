@@ -6,7 +6,7 @@ description = ""
 readme = "README.md"
 
 [dependencies]
-bevy = "0.11"
+bevy = "0.12"
 rand = "*"
 bevy_rapier3d = "0.22.0"
 valve_maps = { path = "../valve_maps" }

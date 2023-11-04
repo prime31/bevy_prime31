@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = "*"
+bevy = "0.12"
 
 [dev-dependencies]
 bevy-inspector-egui = "0.19"

@@ -20,13 +20,13 @@ impl Plugin for DoomLightsPlugin {
 
 fn update_lights(
     camera_q: Query<&Transform, With<Camera>>,
-    mut light_q: Query<(&ComputedVisibility, &Transform, &Handle<Mesh>, &mut DoomLight)>,
+    mut light_q: Query<(&ViewVisibility, &Transform, &Handle<Mesh>, &mut DoomLight)>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let Ok(cam_tf) = camera_q.get_single() else { return };
 
     for (visiblity, tf, mesh_handle, mut doom_light) in light_q.iter_mut() {
-        if !visiblity.is_visible() {
+        if !visiblity.get() {
             continue;
         }
         let Some(mesh) = meshes.get_mut(mesh_handle) else {
@@ -113,7 +113,7 @@ fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 
     value.clamp(out_min, out_max)
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath)]
+#[derive(AsBindGroup, TypeUuid, Debug, Clone, TypePath, Asset)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct DoomLightMaterial {}
 

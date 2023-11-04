@@ -51,16 +51,16 @@ fn pan_orbit_camera(
     let window = q_window.get_single().unwrap();
 
     if input_mouse.pressed(orbit_button) {
-        for ev in ev_motion.iter() {
+        for ev in ev_motion.read() {
             rotation_move += ev.delta;
         }
     } else if input_mouse.pressed(pan_button) {
         // Pan only if we're not rotating at the moment
-        for ev in ev_motion.iter() {
+        for ev in ev_motion.read() {
             pan += ev.delta;
         }
     }
-    for ev in ev_scroll.iter() {
+    for ev in ev_scroll.read() {
         scroll += ev.y * 0.01;
     }
     if input_mouse.just_released(orbit_button) || input_mouse.just_pressed(orbit_button) {

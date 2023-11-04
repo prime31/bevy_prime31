@@ -6,7 +6,7 @@ description = ""
 readme = "README.md"
 
 [dependencies]
-bevy = { version = "0.11.0", features = ["dynamic_linking"] }
+bevy = { version = "0.12.0", features = ["dynamic_linking"] }
 radsort = "0.1"
 
 # [dev.dependencies]
